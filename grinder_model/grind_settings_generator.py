@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 import pandas as pd
 import numpy as np
 
-from volume_predictor_svr import load_model, load_scaler
+from grindparam_predictor import load_model, load_scaler
 
 
 def volume_mismatch_penalty(x, volume, wear, model, scaler, rpm):
@@ -24,7 +24,7 @@ def predict_volume(force, rpm, time, wear, model, scaler):
     return predicted_volume
 
 
-def generate_settings(volume, wear, model, scaler, rpm=11000):
+def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11000):
     
     # x = [force, time]
     x = [5, 10]
@@ -33,10 +33,20 @@ def generate_settings(volume, wear, model, scaler, rpm=11000):
     result = minimize(volume_mismatch_penalty, x, args=(volume, wear, model, scaler, rpm),
                       bounds=((min_f, max_f), (min_t, max_t)))
 
+    input_rpm_correction_data_dict = {
+        'avg_force': [result.x[0]],
+        'rpm_setpoint': [rpm]
+    }
+    input_df = pd.DataFrame(input_rpm_correction_data_dict)
+    input_scaled = rpm_scaler.transform(input_df)
+    input_scaled = pd.DataFrame(input_scaled, columns=input_df.columns)
+    predicted_avg_rpm = rpm_model.predict(input_scaled)
+
+
     settings = {
                 'force': result.x[0],
                 'time': result.x[1],
-                'rpm': rpm,
+                'rpm': predicted_avg_rpm,
     }
     
     predicted_volume = predict_volume(settings['force'], settings['rpm'], settings['time'], wear, model, scaler)
@@ -47,13 +57,18 @@ def generate_settings(volume, wear, model, scaler, rpm=11000):
 if __name__ == '__main__':
 
     # TODO need an extra layer of setpoint to acutal rpm 
+    rpm_correction_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_model_svr_V1.pkl'
+    rpm_correction_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_scaler_svr_V1.pkl'
+    rpm_correction_model = load_model(use_fixed_path=True, fixed_path=rpm_correction_model_path)
+    rpm_correction_scaler = load_scaler(use_fixed_path=True, fixed_path=rpm_correction_scaler_path)
+
     # TODO model seems to underpredict material removal
 
     model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1.pkl'
     scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V1.pkl'
 
     grind_model = load_model(use_fixed_path=True, fixed_path=model_path)
-    scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
+    grind_scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
 
     removed_material = np.arange(10, 100, 5)
     wear_range = np.linspace(1e6, 1e7, 3)
@@ -61,7 +76,7 @@ if __name__ == '__main__':
     for vol in removed_material:
         for wear in wear_range:
 
-            grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, scaler, 10000)
+            grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, 10000)
 
             print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}')
             print(f'Removed material\n  input: {vol}\n  predicted: {predicted_volume_loss}')
