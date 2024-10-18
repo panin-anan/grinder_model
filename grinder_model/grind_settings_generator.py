@@ -29,7 +29,7 @@ def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11
     # x = [force, time]
     x = [5, 10]
     min_f, max_f = 3, 9
-    min_t, max_t = 5, np.inf
+    min_t, max_t = 5, 22
     result = minimize(volume_mismatch_penalty, x, args=(volume, wear, model, scaler, rpm),
                       bounds=((min_f, max_f), (min_t, max_t)))
 
@@ -48,8 +48,13 @@ def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11
                 'time': result.x[1],
                 'rpm': predicted_avg_rpm,
     }
-    
     predicted_volume = predict_volume(settings['force'], settings['rpm'], settings['time'], wear, model, scaler)
+    if vol > 130:
+        mrr = predicted_volume / settings['time']
+        settings['time'] = volume / mrr
+        predicted_volume = volume
+
+
     return settings, predicted_volume
 
 
@@ -70,16 +75,17 @@ if __name__ == '__main__':
     grind_model = load_model(use_fixed_path=True, fixed_path=model_path)
     grind_scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
 
-    removed_material = np.arange(10, 100, 5)
-    wear_range = np.linspace(1e6, 1e7, 3)
+    removed_material = np.arange(10, 200, 10)
+    wear_range = np.linspace(1e6, 3e6, 2)
 
     for vol in removed_material:
         for wear in wear_range:
-
             grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, 10000)
 
             print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}')
             print(f'Removed material\n  input: {vol}\n  predicted: {predicted_volume_loss}')
+
+
 
 
 
