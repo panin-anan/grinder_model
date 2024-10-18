@@ -118,7 +118,7 @@ def save_model(model, scaler, folder_name='saved_models', modelname='svr_model.p
     current_dir = os.getcwd()
 
     # Create the full path by joining the current directory with the folder name
-    folder_path = os.path.join(current_dir, folder_name)
+    folder_path = os.path.join(current_dir, 'src/grinder_model', folder_name)
 
     # Create the folder if it does not exist
     os.makedirs(folder_path, exist_ok=True)
@@ -138,7 +138,7 @@ def load_model(folder_name='saved_models', filename='svr_model.pkl'):
     current_dir = os.getcwd()
 
     # Create the full path by joining the current directory with the folder name
-    folder_path = os.path.join(current_dir, folder_name)
+    folder_path = os.path.join(current_dir, 'src/grinder_model', folder_name)
 
     # Create the full filepath to load the model from
     filepath = os.path.join(folder_path, filename)
@@ -158,7 +158,7 @@ def main():
 
     grind_data = load_data(file_path)
 
-    '''
+    
     #add data from another file
     another_file_path = open_file_dialog()
     if not another_file_path:
@@ -167,7 +167,7 @@ def main():
         additional_data = load_data(another_file_path)
         # Assuming you're concatenating rows or merging based on a common column
         grind_data = pd.concat([grind_data, additional_data], ignore_index=True)
-    '''
+    
     # Delete rows where removed_material is less than 12
     grind_data = grind_data[grind_data['removed_material'] >= 5]
 

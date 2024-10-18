@@ -79,10 +79,7 @@ def main():
                 for initial_wear in initial_wear_range:
                     # Create a DataFrame to store the input data
                     input_data_dict = {
-                        'grind_time': [grind_time],
-                        'avg_rpm': [avg_rpm],
-                        'avg_force': [avg_force],
-                        'initial_wear': [initial_wear]
+       
                     }
                     input_df = pd.DataFrame(input_data_dict)
                     input_scaled = scaler.transform(input_df)
