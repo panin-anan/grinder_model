@@ -61,13 +61,10 @@ def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11
 
 if __name__ == '__main__':
 
-    # TODO need an extra layer of setpoint to acutal rpm 
     rpm_correction_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_model_svr_V1.pkl'
     rpm_correction_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_scaler_svr_V1.pkl'
     rpm_correction_model = load_model(use_fixed_path=True, fixed_path=rpm_correction_model_path)
     rpm_correction_scaler = load_scaler(use_fixed_path=True, fixed_path=rpm_correction_scaler_path)
-
-    # TODO model seems to underpredict material removal
 
     model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1.pkl'
     scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V1.pkl'
