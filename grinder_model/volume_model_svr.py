@@ -23,7 +23,7 @@ def preprocess_data(data, target_column):
     y = data[target_column]
 
     # Split data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=np.random.randint(0,100))
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=np.random.randint(0,100))
 
     # Feature scaling
     scaler = StandardScaler()
