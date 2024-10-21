@@ -198,6 +198,7 @@ def main():
     best_model = train_multi_svr_with_grid_search(X_train, y_train)
 
     # Optionally, evaluate the model on the test set
+    #evaluate_model(best_model, X_train, y_train)
     evaluate_model(best_model, X_test, y_test)
  
     #save model
