@@ -11,6 +11,12 @@ from tkinter import filedialog
 from sklearn.model_selection import GridSearchCV
 import os
 import joblib
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.neural_network import MLPRegressor
+import os
+import joblib
+import random
+
 
 def load_data(file_path):
     #Load dataset from a CSV file.
@@ -109,10 +115,9 @@ def train_multi_rf_with_grid_search(X_train, y_train):
         'bootstrap': [True, False]        # Whether bootstrap samples are used when building trees
     }
 
-
     # Initialize RandomForestRegressor
     rf = RandomForestRegressor(random_state=42)
-
+    y_train = y_train.values.ravel()
     # Use GridSearchCV to search for the best hyperparameters
     grid_search = GridSearchCV(rf, param_grid, cv=5, scoring='neg_root_mean_squared_error', verbose=1, n_jobs=-1)
     grid_search.fit(X_train, y_train)
@@ -128,6 +133,13 @@ def train_multi_rf_with_grid_search(X_train, y_train):
 
 def evaluate_model(model, X_test, y_test):
     y_pred = model.predict(X_test)
+    
+    # Convert y_test to pandas DataFrame if it's not already
+    if isinstance(y_test, np.ndarray):
+        if y_test.ndim == 1:  # Handle the case when it's a 1D array
+            y_test = pd.DataFrame(y_test, columns=["output"])
+        else:  # For multi-dimensional arrays
+            y_test = pd.DataFrame(y_test, columns=[f"output_{i}" for i in range(y_test.shape[1])])
     
     # Evaluate the model with Mean Squared Error and R^2 Score
     mse = mean_squared_error(y_test, y_pred)
@@ -145,11 +157,11 @@ def evaluate_model(model, X_test, y_test):
     
     for i, col in enumerate(y_test.columns):
         plt.subplot(1, len(y_test.columns), i + 1)
-        plt.scatter(y_test[col], y_pred[:, i])
+        plt.scatter(y_test[col], y_pred[:, i] if y_pred.ndim > 1 else y_pred)
         
         # Set axis limits to be the same
-        min_val = min(min(y_test[col]), min(y_pred[:, i]))
-        max_val = max(max(y_test[col]), max(y_pred[:, i]))
+        min_val = min(min(y_test[col]), min(y_pred[:, i] if y_pred.ndim > 1 else y_pred))
+        max_val = max(max(y_test[col]), max(y_pred[:, i] if y_pred.ndim > 1 else y_pred))
         plt.xlim(min_val, max_val)
         plt.ylim(min_val, max_val)
         
@@ -250,9 +262,6 @@ def main():
 
     # Preprocess the data (train the model using the CSV data, for example)
     X_train, X_test, y_train, y_test, scaler = preprocess_data(grind_data, target_columns)
-
-    #y_train = y_train.values.ravel()
-    #y_test = y_test.values.ravel()
 
     best_model = train_multi_rf_with_grid_search(X_train, y_train)
 
