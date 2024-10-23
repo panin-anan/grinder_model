@@ -68,9 +68,9 @@ def main():
         scaler = load_scaler(use_fixed_path=False)
 
     #read current belt's 'initial wear', 'removed_volume', 'RPM' and predict 'Force' and 'grind_time'
-    rpm_range = np.arange(8500, 9000, 100)  # from 8500 to 10000 in steps of 500
-    force_range = np.arange(7, 9.1, 1)  # from 3 to 9 in steps of 1
-    time_range = np.arange(12.5, 13.5, 0.5)
+    rpm_range = np.arange(9000, 11001, 500)  # from 8500 to 10000 in steps of 500
+    force_range = np.arange(5, 5.5, 1)  # from 3 to 9 in steps of 1
+    time_range = np.arange(10, 10.4, 0.5)
     initial_wear = 10000000
 
     for avg_rpm in rpm_range:
