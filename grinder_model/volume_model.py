@@ -12,10 +12,10 @@ from sklearn.model_selection import GridSearchCV
 import os
 import joblib
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.neural_network import MLPRegressor
-import os
-import joblib
-import random
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import GradientBoostingRegressor
 
 
 def load_data(file_path):
@@ -72,26 +72,23 @@ def train_multi_svr_with_grid_search(X_train, y_train):
 
     return best_model
 
-
-def train_multi_mlp_with_grid_search(X_train, y_train):
+def train_gbm_with_grid_search(X_train, y_train):
     """
-    Train a Multi-Layer Perceptron (Neural Network) for multi-output regression.
+    Train a Gradient Boosting Regressor for multi-output regression.
+    Use GridSearchCV to search for the best hyperparameters.
     """
-    # Define the parameter grid for tuning the hyperparameters
+    # Define the parameter grid for GradientBoostingRegressor
     param_grid = {
-        'hidden_layer_sizes': [(50, 50), (100, 100), (100, 50, 50)],  # Different layer configurations
-        'activation': ['relu', 'tanh'],  # Activation functions
-        'solver': ['adam', 'sgd'],  # Optimizers
-        'alpha': [0.0001, 0.001, 0.01],  # L2 regularization
-        'learning_rate': ['constant', 'adaptive'],  # Learning rate
-        'learning_rate_init': [0.001, 0.01]  # Initial learning rate
+        'n_estimators': [100, 200, 300],  # Number of boosting stages
+        'learning_rate': [0.01, 0.05, 0.1, 0.2],  # Learning rate
+        'max_depth': [3, 4, 5, 6]  # Depth of the individual trees
     }
 
-    # Initialize MLPRegressor model
-    mlp = MLPRegressor(max_iter=1000, random_state=42)
+    # Initialize the Gradient Boosting Regressor
+    gbr = GradientBoostingRegressor()
 
     # Use GridSearchCV to search for the best hyperparameters
-    grid_search = GridSearchCV(mlp, param_grid, cv=5, scoring='neg_root_mean_squared_error', verbose=1, n_jobs=-1)
+    grid_search = GridSearchCV(gbr, param_grid, cv=5, scoring='neg_root_mean_squared_error', verbose=1, n_jobs=-1)
     grid_search.fit(X_train, y_train)
 
     # Print the best parameters found by GridSearchCV
@@ -128,6 +125,34 @@ def train_multi_rf_with_grid_search(X_train, y_train):
     # Get the best model
     best_model = grid_search.best_estimator_
 
+
+    return best_model
+
+def train_polynomial_regression_with_grid_search(X_train, y_train):
+    """
+    Train a Polynomial Regression model for multi-output regression.
+    Use PolynomialFeatures with LinearRegression and GridSearchCV to search for the best degree.
+    """
+    # Define the parameter grid for the polynomial degree
+    param_grid = {
+        'poly__degree': [1, 2, 3, 4, 5, 6, 8, 10]  # Adjust the range based on your needs
+    }
+
+    # Create a pipeline that adds polynomial features and applies linear regression
+    pipeline = Pipeline([
+        ('poly', PolynomialFeatures()),  # Create polynomial features
+        ('linear', LinearRegression())   # Fit linear regression
+    ])
+
+    # Use GridSearchCV to search for the best polynomial degree
+    grid_search = GridSearchCV(pipeline, param_grid, cv=5, scoring='neg_root_mean_squared_error', verbose=1, n_jobs=-1)
+    grid_search.fit(X_train, y_train)
+
+    # Print the best parameters found by GridSearchCV
+    print("Best parameters:", grid_search.best_params_)
+
+    # Get the best model
+    best_model = grid_search.best_estimator_
 
     return best_model
 
@@ -263,14 +288,14 @@ def main():
     # Preprocess the data (train the model using the CSV data, for example)
     X_train, X_test, y_train, y_test, scaler = preprocess_data(grind_data, target_columns)
 
-    best_model = train_multi_rf_with_grid_search(X_train, y_train)
+    best_model = train_gbm_with_grid_search(X_train, y_train)
 
     # Optionally, evaluate the model on the test set
     #evaluate_model(best_model, X_train, y_train)
     evaluate_model(best_model, X_test, y_test)
  
     #save model
-    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_rf_V1.pkl', scalername='volume_scaler_rf_V1.pkl')
+    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_gbm_V1.pkl', scalername='volume_scaler_gbm_V1.pkl')
 
 
 if __name__ == "__main__":
