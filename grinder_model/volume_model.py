@@ -67,6 +67,65 @@ def train_multi_svr_with_grid_search(X_train, y_train):
     return best_model
 
 
+def train_multi_mlp_with_grid_search(X_train, y_train):
+    """
+    Train a Multi-Layer Perceptron (Neural Network) for multi-output regression.
+    """
+    # Define the parameter grid for tuning the hyperparameters
+    param_grid = {
+        'hidden_layer_sizes': [(50, 50), (100, 100), (100, 50, 50)],  # Different layer configurations
+        'activation': ['relu', 'tanh'],  # Activation functions
+        'solver': ['adam', 'sgd'],  # Optimizers
+        'alpha': [0.0001, 0.001, 0.01],  # L2 regularization
+        'learning_rate': ['constant', 'adaptive'],  # Learning rate
+        'learning_rate_init': [0.001, 0.01]  # Initial learning rate
+    }
+
+    # Initialize MLPRegressor model
+    mlp = MLPRegressor(max_iter=1000, random_state=42)
+
+    # Use GridSearchCV to search for the best hyperparameters
+    grid_search = GridSearchCV(mlp, param_grid, cv=5, scoring='neg_root_mean_squared_error', verbose=1, n_jobs=-1)
+    grid_search.fit(X_train, y_train)
+
+    # Print the best parameters found by GridSearchCV
+    print("Best parameters:", grid_search.best_params_)
+
+    # Get the best model
+    best_model = grid_search.best_estimator_
+
+    return best_model
+
+def train_multi_rf_with_grid_search(X_train, y_train):
+    """
+    Train a Random Forest Model
+    """
+    # Define the parameter grid
+    param_grid = {
+        'n_estimators': [50, 100, 200, 300, 500],  # Number of trees in the forest
+        'max_depth': [None, 1, 5, 10, 20],  # Maximum depth of the tree
+        'min_samples_split': [2, 5, 10],  # Minimum number of samples required to split an internal node
+        'min_samples_leaf': [1, 2, 4, 8],    # Minimum number of samples required to be at a leaf node
+        'bootstrap': [True, False]        # Whether bootstrap samples are used when building trees
+    }
+
+
+    # Initialize RandomForestRegressor
+    rf = RandomForestRegressor(random_state=42)
+
+    # Use GridSearchCV to search for the best hyperparameters
+    grid_search = GridSearchCV(rf, param_grid, cv=5, scoring='neg_root_mean_squared_error', verbose=1, n_jobs=-1)
+    grid_search.fit(X_train, y_train)
+
+    # Print the best parameters found by GridSearchCV
+    print("Best parameters:", grid_search.best_params_)
+
+    # Get the best model
+    best_model = grid_search.best_estimator_
+
+
+    return best_model
+
 def evaluate_model(model, X_test, y_test):
     y_pred = model.predict(X_test)
     
@@ -195,22 +254,14 @@ def main():
     #y_train = y_train.values.ravel()
     #y_test = y_test.values.ravel()
 
-    best_model = train_multi_svr_with_grid_search(X_train, y_train)
+    best_model = train_multi_rf_with_grid_search(X_train, y_train)
 
     # Optionally, evaluate the model on the test set
     #evaluate_model(best_model, X_train, y_train)
     evaluate_model(best_model, X_test, y_test)
  
     #save model
-    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V1.pkl', scalername='volume_scaler_svr_V1.pkl')
-
-    '''
-    latest model with data gathering 2
-    Mean Absolute Error: 3.8609010601716998
-    RMS Error: 5.733461811107904
-    Mean Squared Error: 32.87258433943272
-    R^2 Score: 0.9553432014709704
-    '''
+    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_rf_V1.pkl', scalername='volume_scaler_rf_V1.pkl')
 
 
 if __name__ == "__main__":
