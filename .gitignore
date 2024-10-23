@@ -118,3 +118,7 @@ src/environment_reconstruction/environment_reconstruction/__pycache__/stereo_rec
 src/environment_reconstruction/environment_reconstruction/__pycache__/stereo_reconstruction.cpython-310.pyc
 saved_models/volume_model_svr_V1.pkl
 saved_models/volume_scaler_svr_V1.pkl
+saved_models/volume_model_gbm_V1.pkl
+saved_models/volume_model_poly_V1.pkl
+saved_models/volume_scaler_poly_V1.pkl
+saved_models/volume_scaler_gbm_V1.pkl
