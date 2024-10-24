@@ -288,14 +288,14 @@ def main():
     # Preprocess the data (train the model using the CSV data, for example)
     X_train, X_test, y_train, y_test, scaler = preprocess_data(grind_data, target_columns)
 
-    best_model = train_gbm_with_grid_search(X_train, y_train)
+    best_model = train_multi_svr_with_grid_search(X_train, y_train)
 
     # Optionally, evaluate the model on the test set
     #evaluate_model(best_model, X_train, y_train)
     evaluate_model(best_model, X_test, y_test)
  
     #save model
-    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_gbm_V1.pkl', scalername='volume_scaler_gbm_V1.pkl')
+    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V1.pkl', scalername='volume_scaler_svr_V1.pkl')
 
 
 if __name__ == "__main__":
