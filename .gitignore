@@ -116,6 +116,7 @@ venv.bak/
 /experiment_folder/
 src/environment_reconstruction/environment_reconstruction/__pycache__/stereo_reconstruction.cpython-310.pyc
 src/environment_reconstruction/environment_reconstruction/__pycache__/stereo_reconstruction.cpython-310.pyc
+saved_models/
 saved_models/volume_model_svr_V1.pkl
 saved_models/volume_scaler_svr_V1.pkl
 saved_models/volume_model_gbm_V1.pkl

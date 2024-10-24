@@ -204,13 +204,6 @@ def main():
     #save model
     save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V1.pkl', scalername='volume_scaler_svr_V1.pkl')
 
-    '''
-    latest model with data gathering 2
-    Mean Absolute Error: 3.8609010601716998
-    RMS Error: 5.733461811107904
-    Mean Squared Error: 32.87258433943272
-    R^2 Score: 0.9553432014709704
-    '''
 
 
 if __name__ == "__main__":
