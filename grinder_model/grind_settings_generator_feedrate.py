@@ -2,8 +2,9 @@ import pathlib
 from scipy.optimize import minimize
 import pandas as pd
 import numpy as np
+import math
 
-from grindparam_predictor import load_model, load_scaler
+from volume_predictor_svr import load_model, load_scaler
 
 
 def volume_mismatch_penalty(x, volume, wear, model, scaler, rpm):
@@ -75,13 +76,17 @@ if __name__ == '__main__':
 
     removed_material = np.arange(80, 200, 10)
     wear_range = np.linspace(1e6, 3e6, 2)
+    belt_width = 0.025                          #in m 
+    belt_angle = 30                             #in degree
+    contact_width = belt_width * math.sin(math.radians(belt_angle))
 
     for vol in removed_material:
         for wear in wear_range:
             grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, 10000)
-
-            print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}')
+            feed_rate = belt_width / grind_settings["time"]
+            print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}\n  Feed_rate: {feed_rate * 1000} mm/s')
             print(f'Removed material\n  input: {vol}\n  predicted: {predicted_volume_loss}')
+
 
 
 
