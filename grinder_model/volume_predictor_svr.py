@@ -122,8 +122,8 @@ def main():
     
     if use_fixed_model_path:
         # Specify the fixed model and scaler paths
-        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1.pkl'
-        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V1.pkl'
+        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V2_angle.pkl'
+        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V2_angle.pkl'
         
         grind_model = load_model(use_fixed_path=True, fixed_path=fixed_model_path)
         scaler = load_scaler(use_fixed_path=True, fixed_path=fixed_scaler_path)
@@ -156,7 +156,7 @@ def main():
                 predicted_volume = grind_model.predict(input_scaled)
                 print(f"RPM: {avg_rpm}, Force: {avg_force}N, Grind Time: {grind_time} sec --> Predicted Removed Volume: {predicted_volume[0]}")
     '''
-
+    
     #load test data and evaluate model
     #read grind data
     file_path = open_file_dialog()
@@ -180,7 +180,7 @@ def main():
     print(grind_data)
 
     #drop unrelated columns
-    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material']
+    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'avg_pressure', 'initial_wear', 'removed_material']
     grind_data = grind_data[related_columns]
 
     #desired output

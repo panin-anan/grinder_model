@@ -127,6 +127,12 @@ def save_model(model, scaler, folder_name='saved_models', modelname='svr_model.p
     model_filepath = os.path.join(folder_path, modelname)
     scaler_filepath = os.path.join(folder_path, scalername)
 
+    if os.path.exists(model_filepath) or os.path.exists(scaler_filepath):
+        overwrite = input(f"Files '{model_filepath}' or '{scaler_filepath}' already exist. Overwrite? (y/n): ").strip().lower()
+        if overwrite != 'y':
+            print("Model and scaler save operation cancelled.")
+            return
+
     # Save the model to the specified filepath
     joblib.dump(model, model_filepath)
     joblib.dump(scaler, scaler_filepath)
@@ -180,11 +186,15 @@ def main():
     grind_data = grind_data[pd.isna(grind_data['failure_msg'])]
     print(grind_data)
 
-    #drop unrelated columns
-    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material']
-    grind_data = grind_data[related_columns]
 
-    
+    duplicate_removed_material = grind_data[grind_data.duplicated(subset=['removed_material'], keep=False)]
+    if not duplicate_removed_material.empty:
+        print("Warning: Duplicate 'removed_material' values found:")
+        print(duplicate_removed_material)
+
+    #drop unrelated columns
+    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'avg_pressure', 'initial_wear', 'removed_material']
+    grind_data = grind_data[related_columns]
 
     #desired output
     target_columns = ['removed_material']
@@ -202,7 +212,7 @@ def main():
     evaluate_model(best_model, X_test, y_test)
  
     #save model
-    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V1.pkl', scalername='volume_scaler_svr_V1.pkl')
+    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V2_angle.pkl', scalername='volume_scaler_svr_V2_angle.pkl')
 
 
 
