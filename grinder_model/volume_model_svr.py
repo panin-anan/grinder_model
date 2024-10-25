@@ -16,24 +16,29 @@ def load_data(file_path):
     #Load dataset from a CSV file.
     return pd.read_csv(file_path)
 
-def preprocess_data(data, target_column):
+def preprocess_data(data, target_column, n_bootstrap=10):
     #Preprocess the data by splitting into features and target and then scaling.
 
     X = data.drop(columns=target_column)
     y = data[target_column]
 
-    # Split data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=np.random.randint(0,100))
+    bootstrap_samples = []
 
-    # Feature scaling
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    for _ in range(n_bootstrap):
+        # Split data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=np.random.randint(0,100))
 
-    X_train = pd.DataFrame(X_train, columns=X.columns)
-    X_test = pd.DataFrame(X_test, columns=X.columns)
+        # Feature scaling
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
 
-    return X_train, X_test, y_train, y_test, scaler
+        X_train = pd.DataFrame(X_train, columns=X.columns)
+        X_test = pd.DataFrame(X_test, columns=X.columns)
+
+        bootstrap_samples.append((X_train, X_test, y_train, y_test, scaler))
+
+    return bootstrap_samples
 
 def train_multi_svr_with_grid_search(X_train, y_train):
     """
@@ -165,14 +170,19 @@ def main():
     grind_data = load_data(file_path)
 
     
-    #add data from another file
-    another_file_path = open_file_dialog()
-    if not another_file_path:
-        print("No second file selected. Continuing with the first file data.")
-    else:
+    # Loop to add more files if the user chooses
+    while True:
+        another_file_path = open_file_dialog()
+        if not another_file_path:
+            print("No more files selected. Moving forward with concatenated data.")
+            break
+
         additional_data = load_data(another_file_path)
-        # Assuming you're concatenating rows or merging based on a common column
+        # Concatenate the new data
         grind_data = pd.concat([grind_data, additional_data], ignore_index=True)
+        print("File added successfully. Would you like to add another file?")
+
+    print("All files loaded and concatenated.")
     
     # Delete rows where removed_material is less than 12
     grind_data = grind_data[grind_data['removed_material'] >= 5]
@@ -193,26 +203,53 @@ def main():
         print(duplicate_removed_material)
 
     #drop unrelated columns
-    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'avg_pressure', 'initial_wear', 'removed_material']
+    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'grind_time', 'initial_wear', 'removed_material']
     grind_data = grind_data[related_columns]
 
     #desired output
     target_columns = ['removed_material']
 
     # Preprocess the data (train the model using the CSV data, for example)
-    X_train, X_test, y_train, y_test, scaler = preprocess_data(grind_data, target_columns)
+    bootstrap_samples = preprocess_data(grind_data, target_columns)
 
     #y_train = y_train.values.ravel()
     #y_test = y_test.values.ravel()
 
-    best_model = train_multi_svr_with_grid_search(X_train, y_train)
+    models = []
+    maes = []
+
+    for i, (X_train, X_test, y_train, y_test, scaler) in enumerate(bootstrap_samples):
+        # Train a model on each bootstrap sample
+        model = train_multi_svr_with_grid_search(X_train, y_train)
+
+        # Evaluate model and calculate MAE
+        y_pred = model.predict(X_test)
+        mae = mean_absolute_error(y_test, y_pred)
+        
+        # Store the model and its MAE
+        models.append(model)
+        maes.append(mae)
+        
+        print(f"Model {i+1} - MAE: {mae}")
+
+    avg_mae = np.mean(maes)
+    print(f"Average MAE across all models: {avg_mae}")
+
+    # Find the model with the MAE closest to the average MAE
+    closest_index = np.argmin([abs(mae - avg_mae) for mae in maes])
+    best_model = models[closest_index]
+    best_model_mae = maes[closest_index]
+
+    print(f"Selected model {closest_index+1} with MAE closest to average: {best_model_mae}")
+
+    _, best_X_test, _, best_y_test, _ = bootstrap_samples[closest_index]
 
     # Optionally, evaluate the model on the test set
     #evaluate_model(best_model, X_train, y_train)
-    evaluate_model(best_model, X_test, y_test)
+    evaluate_model(best_model, best_X_test, best_y_test)
  
     #save model
-    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V2_angle.pkl', scalername='volume_scaler_svr_V2_angle.pkl')
+    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V3_varyA.pkl', scalername='volume_scaler_svr_V3_varyA.pkl')
 
 
 
