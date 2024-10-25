@@ -47,9 +47,9 @@ def train_multi_svr_with_grid_search(X_train, y_train):
     """
     # Define the parameter grid
     param_grid = {
-        'estimator__C': [0.05, 0.1, 0.2, 0.5, 1, 5, 10, 20, 50, 100, 150],
-        'estimator__gamma': [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3],
-        'estimator__epsilon': [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3],
+        'estimator__C': [100, 200, 500, 1000, 10000],
+        'estimator__gamma': [0.005, 0.01, 0.02, 0.05, 0.1, 0.2],
+        'estimator__epsilon': [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5],
         'estimator__kernel': ['rbf']
     }
 
@@ -59,11 +59,12 @@ def train_multi_svr_with_grid_search(X_train, y_train):
     multioutput_svr = MultiOutputRegressor(svr)
 
     # Use GridSearchCV to search for the best hyperparameters
-    grid_search = GridSearchCV(multioutput_svr, param_grid, cv=5, scoring='neg_root_mean_squared_error', verbose=1, n_jobs=-1)
+    grid_search = GridSearchCV(multioutput_svr, param_grid, cv=5, scoring='neg_mean_absolute_error', verbose=1, n_jobs=-1)
     grid_search.fit(X_train, y_train)
 
     # Print the best parameters found by GridSearchCV
     print("Best parameters:", grid_search.best_params_)
+    print("Best cross-validation score (MAE):", -grid_search.best_score_)
 
     # Get the best model
     best_model = grid_search.best_estimator_
@@ -203,7 +204,7 @@ def main():
         print(duplicate_removed_material)
 
     #drop unrelated columns
-    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'grind_time', 'initial_wear', 'removed_material']
+    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'avg_pressure', 'initial_wear', 'removed_material']
     grind_data = grind_data[related_columns]
 
     #desired output
@@ -249,7 +250,7 @@ def main():
     evaluate_model(best_model, best_X_test, best_y_test)
  
     #save model
-    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V3_varyA.pkl', scalername='volume_scaler_svr_V3_varyA.pkl')
+    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V2_avgP.pkl', scalername='volume_scaler_svr_V2_avgP.pkl')
 
 
 

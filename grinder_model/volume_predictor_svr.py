@@ -122,8 +122,8 @@ def main():
     
     if use_fixed_model_path:
         # Specify the fixed model and scaler paths
-        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V2_angle.pkl'
-        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V2_angle.pkl'
+        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V2_avgP.pkl'
+        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V2_avgP.pkl'
         
         grind_model = load_model(use_fixed_path=True, fixed_path=fixed_model_path)
         scaler = load_scaler(use_fixed_path=True, fixed_path=fixed_scaler_path)
