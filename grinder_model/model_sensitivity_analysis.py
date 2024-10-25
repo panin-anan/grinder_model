@@ -218,6 +218,60 @@ def sensitivity_analysis_time_forces(model, scaler, base_data, base_forces):
     plt.tight_layout()
     plt.show()
 
+def sensitivity_analysis_wear_forces(model, scaler, base_data, base_forces):
+    """
+    Perform sensitivity analysis on the trained model by varying initial wear across different base forces.
+    Parameters:
+        model: Trained SVR model.
+        scaler: Scaler used to preprocess the input data.
+        base_data: A single data point representing the manually input base values.
+        base_forces: List of base forces to use for sensitivity analysis.
+    """
+    # Select the base data point for sensitivity analysis
+    base_data = base_data.iloc[0]  # Use the first (and only) row for sensitivity analysis
+
+    # Variables to test
+    wears = np.linspace(base_data['initial_wear'] * 0, base_data['initial_wear'] * 1.5, 100)  # Vary initial wear up to 300%
+
+    # Function to make predictions after scaling inputs
+    def predict_volume(data_row):
+        # Ensure the data_row is in the form of a DataFrame with proper column names
+        if isinstance(data_row, pd.Series):
+            data_row = pd.DataFrame([data_row])
+
+        # Scale the input data using the scaler
+        scaled_row = scaler.transform(data_row)
+        
+        # Predict the volume using the trained model
+        return model.predict(scaled_row)[0]
+
+    # Plot sensitivity analysis results
+    plt.figure(figsize=(10, 6))
+
+    # Loop through each base force and calculate wear sensitivities
+    for base_force in base_forces:
+        # Store results for wear sensitivity
+        wear_sensitivities = []
+        for wear in wears:
+            test_data = base_data.copy()
+            test_data['avg_force'] = base_force  # Set the base force for this iteration
+            test_data['initial_wear'] = wear  # Vary initial wear
+            predicted_volume = predict_volume(test_data)
+            wear_sensitivities.append(predicted_volume)
+
+        # Plot the wear sensitivities for this base force
+        plt.plot(wears, wear_sensitivities, label=f'Force: {base_force}')
+
+    # Customize the plot
+    plt.xlabel('Initial Wear')
+    plt.ylabel('Predicted Grinded Volume')
+    plt.title('Sensitivity to Initial Wear for Different Base Forces')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
 def main():
     #get grind model
     use_fixed_model_path = True# Set this to True or False based on your need
@@ -244,9 +298,9 @@ def main():
 
     # Create a DataFrame
     grind_data = pd.DataFrame([base_data])
-    base_forces = [2, 3, 4, 5, 7, 9, 12]
+    base_forces = [2, 3, 4, 5, 7, 9]
     base_rpms = [6000, 7000, 8000, 8500, 9000]
-    sensitivity_analysis_time_forces(volume_model, scaler, grind_data, base_forces)
+    sensitivity_analysis_wear_forces(volume_model, scaler, grind_data, base_forces)
 
 if __name__ == "__main__":
     main()
