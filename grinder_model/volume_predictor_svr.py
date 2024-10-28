@@ -7,19 +7,7 @@ import joblib
 import pathlib
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import matplotlib.pyplot as plt
-
-def open_file_dialog():
-    # Create a Tkinter window
-    root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    # Open file dialog and return selected file path
-    file_path = filedialog.askopenfilename(title="Select CSV file", filetypes=[("CSV files", "*.csv")])
-    return file_path
-
-def load_data(file_path):
-    #Load dataset from a CSV file.
-    return pd.read_csv(file_path)
+from volume_model_svr import open_file_dialog, load_data, filter_grind_data
 
 def load_model(use_fixed_path=False, fixed_path='saved_models/svr_model.pkl'):
     if use_fixed_path:
@@ -158,26 +146,11 @@ def main():
     '''
     
     #load test data and evaluate model
+
     #read grind data
-    file_path = open_file_dialog()
-    if not file_path:
-        print("No file selected. Exiting.")
-        return
-
-    grind_data = load_data(file_path)
-
-
-    # Delete rows where removed_material is less than 12
-    grind_data = grind_data[grind_data['removed_material'] >= 5]
-
-    # Filter out points which have mad of more than 1000
-    grind_data = grind_data[grind_data['mad_rpm'] <= 1000]
-
-    # Filter out avg rpm that is lower than half of rpm_setpoint
-    grind_data = grind_data[grind_data['avg_rpm'] >= grind_data['rpm_setpoint'] / 2]
-
-    grind_data = grind_data[pd.isna(grind_data['failure_msg'])]
-    print(grind_data)
+    grind_data = load_data()
+    #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
+    grind_data = filter_grind_data(grind_data)
 
     #drop unrelated columns
     related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'avg_pressure', 'initial_wear', 'removed_material']
