@@ -38,8 +38,8 @@ def load_data():
     return grind_data
 
 def filter_grind_data(grind_data):
-    # Delete rows where removed_material is less than 5
-    grind_data = grind_data[grind_data['removed_material'] >= 5]
+    # Delete rows where removed_material is less than 3
+    grind_data = grind_data[grind_data['removed_material'] >= 3]
 
     # Filter out points with mad_rpm greater than 1000
     grind_data = grind_data[grind_data['mad_rpm'] <= 1000]
@@ -56,9 +56,11 @@ def filter_grind_data(grind_data):
         print("Warning: Duplicate 'removed_material' values found:")
         print(duplicate_removed_material)
 
+    print(grind_data)
+
     return grind_data
 
-def preprocess_data(data, target_column, n_bootstrap=10):
+def preprocess_data(data, target_column, n_bootstrap=5):
     #Preprocess the data by splitting into features and target and then scaling.
 
     X = data.drop(columns=target_column)
@@ -251,7 +253,7 @@ def main():
     grind_data = filter_grind_data(grind_data)
 
     #drop unrelated columns
-    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material']
+    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area' , 'initial_wear', 'removed_material']
     grind_data = grind_data[related_columns]
 
     #desired output
@@ -265,7 +267,7 @@ def main():
     evaluate_model(best_model, best_X_test, best_y_test)
  
     #save model
-    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_V2_avgP.pkl', scalername='volume_scaler_svr_V2_avgP.pkl')
+    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_W13_withgeom.pkl', scalername='volume_scaler_svr_W13_withgeom.pkl')
 
 
 
