@@ -12,9 +12,51 @@ from sklearn.model_selection import GridSearchCV
 import os
 import joblib
 
-def load_data(file_path):
-    #Load dataset from a CSV file.
-    return pd.read_csv(file_path)
+def load_data():
+    # Initial file selection
+    file_path = open_file_dialog()
+    if not file_path:
+        print("No file selected. Exiting.")
+        return None
+
+    # Load the first file's data
+    grind_data = pd.read_csv(file_path)
+
+    # Loop to add more files if the user chooses
+    while True:
+        another_file_path = open_file_dialog()
+        if not another_file_path:
+            print("No more files selected. Moving forward with concatenated data.")
+            break
+
+        # Load and concatenate additional data
+        additional_data = pd.read_csv(another_file_path)
+        grind_data = pd.concat([grind_data, additional_data], ignore_index=True)
+        print("File added successfully. Would you like to add another file?")
+
+    print("All files loaded and concatenated.")
+    return grind_data
+
+def filter_grind_data(grind_data):
+    # Delete rows where removed_material is less than 5
+    grind_data = grind_data[grind_data['removed_material'] >= 5]
+
+    # Filter out points with mad_rpm greater than 1000
+    grind_data = grind_data[grind_data['mad_rpm'] <= 1000]
+
+    # Filter out rows where avg_rpm is less than half of rpm_setpoint
+    grind_data = grind_data[grind_data['avg_rpm'] >= grind_data['rpm_setpoint'] / 2]
+
+    # Remove rows with any failure messages
+    grind_data = grind_data[pd.isna(grind_data['failure_msg'])]
+
+    # Check for duplicate 'removed_material' values
+    duplicate_removed_material = grind_data[grind_data.duplicated(subset=['removed_material'], keep=False)]
+    if not duplicate_removed_material.empty:
+        print("Warning: Duplicate 'removed_material' values found:")
+        print(duplicate_removed_material)
+
+    return grind_data
 
 def preprocess_data(data, target_column, n_bootstrap=10):
     #Preprocess the data by splitting into features and target and then scaling.
@@ -47,7 +89,7 @@ def train_multi_svr_with_grid_search(X_train, y_train):
     """
     # Define the parameter grid
     param_grid = {
-        'estimator__C': [100, 200, 500, 1000, 10000],
+        'estimator__C': [100, 200, 500, 1000, 2000],
         'estimator__gamma': [0.005, 0.01, 0.02, 0.05, 0.1, 0.2],
         'estimator__epsilon': [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5],
         'estimator__kernel': ['rbf']
@@ -110,6 +152,44 @@ def evaluate_model(model, X_test, y_test):
     plt.tight_layout()
     plt.show()
 
+def train_and_select_best_model(grind_data, target_columns):
+    # Preprocess the data (generate bootstrap samples)
+    bootstrap_samples = preprocess_data(grind_data, target_columns)
+
+    models = []
+    maes = []
+
+    # Train models on bootstrap samples and calculate MAE for each
+    for i, (X_train, X_test, y_train, y_test, scaler) in enumerate(bootstrap_samples):
+        # Train a model on each bootstrap sample
+        model = train_multi_svr_with_grid_search(X_train, y_train)
+
+        # Evaluate model and calculate MAE
+        y_pred = model.predict(X_test)
+        mae = mean_absolute_error(y_test, y_pred)
+        
+        # Store the model and its MAE
+        models.append(model)
+        maes.append(mae)
+        
+        print(f"Model {i+1} - MAE: {mae}")
+
+    # Calculate the average MAE across all models
+    avg_mae = np.mean(maes)
+    print(f"Average MAE across all models: {avg_mae}")
+
+    # Find the model with the MAE closest to the average MAE
+    closest_index = np.argmin([abs(mae - avg_mae) for mae in maes])
+    best_model = models[closest_index]
+    best_model_mae = maes[closest_index]
+
+    print(f"Selected model {closest_index+1} with MAE closest to average: {best_model_mae}")
+
+    # Retrieve the corresponding test set for the best model
+    _, best_X_test, _, best_y_test, _ = bootstrap_samples[closest_index]
+
+    return best_model, best_X_test, best_y_test
+
 def open_file_dialog():
     # Create a Tkinter window
     root = tk.Tk()
@@ -163,45 +243,9 @@ def load_model(folder_name='saved_models', filename='svr_model.pkl'):
 
 def main():
     #read grind data
-    file_path = open_file_dialog()
-    if not file_path:
-        print("No file selected. Exiting.")
-        return
-
-    grind_data = load_data(file_path)
-
-    
-    # Loop to add more files if the user chooses
-    while True:
-        another_file_path = open_file_dialog()
-        if not another_file_path:
-            print("No more files selected. Moving forward with concatenated data.")
-            break
-
-        additional_data = load_data(another_file_path)
-        # Concatenate the new data
-        grind_data = pd.concat([grind_data, additional_data], ignore_index=True)
-        print("File added successfully. Would you like to add another file?")
-
-    print("All files loaded and concatenated.")
-    
-    # Delete rows where removed_material is less than 12
-    grind_data = grind_data[grind_data['removed_material'] >= 5]
-
-    # Filter out points which have mad of more than 1000
-    grind_data = grind_data[grind_data['mad_rpm'] <= 1000]
-
-    # Filter out avg rpm that is lower than half of rpm_setpoint
-    grind_data = grind_data[grind_data['avg_rpm'] >= grind_data['rpm_setpoint'] / 2]
-
-    grind_data = grind_data[pd.isna(grind_data['failure_msg'])]
-    print(grind_data)
-
-
-    duplicate_removed_material = grind_data[grind_data.duplicated(subset=['removed_material'], keep=False)]
-    if not duplicate_removed_material.empty:
-        print("Warning: Duplicate 'removed_material' values found:")
-        print(duplicate_removed_material)
+    grind_data = load_data()
+    #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
+    grind_data = filter_grind_data(grind_data)
 
     #drop unrelated columns
     related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'avg_pressure', 'initial_wear', 'removed_material']
@@ -210,40 +254,8 @@ def main():
     #desired output
     target_columns = ['removed_material']
 
-    # Preprocess the data (train the model using the CSV data, for example)
-    bootstrap_samples = preprocess_data(grind_data, target_columns)
-
-    #y_train = y_train.values.ravel()
-    #y_test = y_test.values.ravel()
-
-    models = []
-    maes = []
-
-    for i, (X_train, X_test, y_train, y_test, scaler) in enumerate(bootstrap_samples):
-        # Train a model on each bootstrap sample
-        model = train_multi_svr_with_grid_search(X_train, y_train)
-
-        # Evaluate model and calculate MAE
-        y_pred = model.predict(X_test)
-        mae = mean_absolute_error(y_test, y_pred)
-        
-        # Store the model and its MAE
-        models.append(model)
-        maes.append(mae)
-        
-        print(f"Model {i+1} - MAE: {mae}")
-
-    avg_mae = np.mean(maes)
-    print(f"Average MAE across all models: {avg_mae}")
-
-    # Find the model with the MAE closest to the average MAE
-    closest_index = np.argmin([abs(mae - avg_mae) for mae in maes])
-    best_model = models[closest_index]
-    best_model_mae = maes[closest_index]
-
-    print(f"Selected model {closest_index+1} with MAE closest to average: {best_model_mae}")
-
-    _, best_X_test, _, best_y_test, _ = bootstrap_samples[closest_index]
+    # Train and select best model out of specified number of bootstrap
+    best_model, best_X_test, best_y_test = train_and_select_best_model(grind_data, target_columns)
 
     # Optionally, evaluate the model on the test set
     #evaluate_model(best_model, X_train, y_train)
