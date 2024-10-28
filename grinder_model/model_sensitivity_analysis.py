@@ -271,36 +271,82 @@ def sensitivity_analysis_wear_forces(model, scaler, base_data, base_forces):
     plt.tight_layout()
     plt.show()
 
+def predict_volume(model, scaler, data_row):
+    """Helper function to scale data and predict volume with the model."""
+    # Ensure the data_row is in the form of a DataFrame with proper column names
+    if isinstance(data_row, pd.Series):
+        data_row = pd.DataFrame([data_row])
+
+    # Reorder columns to match the scaler's expected input during fit
+    data_row = data_row[scaler.feature_names_in_]
+
+    # Scale and predict
+    scaled_row = scaler.transform(data_row)
+    return model.predict(scaled_row)[0]
+
 
 def main():
-    #get grind model
-    use_fixed_model_path = True# Set this to True or False based on your need
+    # Define paths for the three models and scalers
+    model_paths = [
+        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1.pkl',
+        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V2_avgP.pkl',
+        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V3_doublearea.pkl'
+    ]
     
-    if use_fixed_model_path:
-        # Specify the fixed model and scaler paths
-        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1.pkl'
-        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V1.pkl'
-        
-        volume_model = load_model(use_fixed_path=True, fixed_path=fixed_model_path)
-        scaler = load_scaler(use_fixed_path=True, fixed_path=fixed_scaler_path)
-    else:
-        # Load model and scaler using file dialogs
-        volume_model = load_model(use_fixed_path=False)
-        scaler = load_scaler(use_fixed_path=False)
+    scaler_paths = [
+        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V1.pkl',
+        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V2_avgP.pkl',
+        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V3_doublearea.pkl'
+    ]
 
-    #read current belt's 'initial wear', 'removed_volume', 'RPM' and predict 'Force' and 'grind_time'
-    base_data = {
+    # Load all models and scalers
+    models = [load_model(use_fixed_path=True, fixed_path=path) for path in model_paths]
+    scalers = [load_scaler(use_fixed_path=True, fixed_path=path) for path in scaler_paths]
+
+    grind_areas = [50, 50, 98]
+    target_pressure = 0.09  # Adjust this value based on your application
+    # Define base data for sensitivity analysis (excluding avg_force to be calculated)
+    base_data_template = {
         'grind_time': 12.0,
-        'avg_rpm': 8000.0,
-        'avg_force': 8,
+        'avg_rpm': 9000.0,
         'initial_wear': 30000000
     }
 
-    # Create a DataFrame
-    grind_data = pd.DataFrame([base_data])
-    base_forces = [2, 3, 4, 5, 7, 9]
-    base_rpms = [6000, 7000, 8000, 8500, 9000]
-    sensitivity_analysis_wear_forces(volume_model, scaler, grind_data, base_forces)
+    # Initialize the plot
+    plt.figure(figsize=(10, 6))
+
+    # Perform sensitivity analysis for each model and plot
+    for i, (model, scaler, grind_area) in enumerate(zip(models, scalers, grind_areas), 1):
+        # Calculate force to achieve the target pressure for this model's grind area
+        base_force = target_pressure * grind_area  # Force = Pressure * Area
+
+        # Set up base data with the specific grind area and calculated force for this model
+        base_data = base_data_template.copy()
+        base_data['grind_area'] = grind_area
+        base_data['avg_force'] = base_force
+        grind_data = pd.DataFrame([base_data])
+
+        # Run sensitivity analysis on wear for each model with the calculated force
+        wears = np.linspace(base_data['initial_wear'] * 0, base_data['initial_wear'] * 1.5, 100)
+        
+        wear_sensitivities = []
+        for wear in wears:
+            test_data = grind_data.iloc[0].copy()
+            test_data['initial_wear'] = wear
+            predicted_volume = predict_volume(model, scaler, test_data)
+            wear_sensitivities.append(predicted_volume)
+
+        # Plot with model label for each grind area and corresponding force
+        plt.plot(wears, wear_sensitivities, label=f'Model {i} (Grind Area: {grind_area}, Force: {base_force:.2f}N)')
+
+    # Customize the plot for comparison
+    plt.xlabel('Initial Wear')
+    plt.ylabel('Predicted Grinded Volume')
+    plt.title('Sensitivity to Initial Wear at Same Pressure Across Models')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     main()

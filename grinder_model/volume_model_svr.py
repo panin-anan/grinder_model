@@ -158,6 +158,7 @@ def train_and_select_best_model(grind_data, target_columns):
 
     models = []
     maes = []
+    scalers = []
 
     # Train models on bootstrap samples and calculate MAE for each
     for i, (X_train, X_test, y_train, y_test, scaler) in enumerate(bootstrap_samples):
@@ -171,7 +172,8 @@ def train_and_select_best_model(grind_data, target_columns):
         # Store the model and its MAE
         models.append(model)
         maes.append(mae)
-        
+        scalers.append(scaler)
+
         print(f"Model {i+1} - MAE: {mae}")
 
     # Calculate the average MAE across all models
@@ -182,13 +184,14 @@ def train_and_select_best_model(grind_data, target_columns):
     closest_index = np.argmin([abs(mae - avg_mae) for mae in maes])
     best_model = models[closest_index]
     best_model_mae = maes[closest_index]
+    best_scaler = scalers[closest_index]
 
     print(f"Selected model {closest_index+1} with MAE closest to average: {best_model_mae}")
 
     # Retrieve the corresponding test set for the best model
     _, best_X_test, _, best_y_test, _ = bootstrap_samples[closest_index]
 
-    return best_model, best_X_test, best_y_test
+    return best_model, best_scaler, best_X_test, best_y_test
 
 def open_file_dialog():
     # Create a Tkinter window
@@ -248,21 +251,21 @@ def main():
     grind_data = filter_grind_data(grind_data)
 
     #drop unrelated columns
-    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'avg_pressure', 'initial_wear', 'removed_material']
+    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material']
     grind_data = grind_data[related_columns]
 
     #desired output
     target_columns = ['removed_material']
 
     # Train and select best model out of specified number of bootstrap
-    best_model, best_X_test, best_y_test = train_and_select_best_model(grind_data, target_columns)
+    best_model, best_scaler, best_X_test, best_y_test = train_and_select_best_model(grind_data, target_columns)
 
     # Optionally, evaluate the model on the test set
     #evaluate_model(best_model, X_train, y_train)
     evaluate_model(best_model, best_X_test, best_y_test)
  
     #save model
-    save_model(best_model, scaler, folder_name='saved_models', modelname='volume_model_svr_V2_avgP.pkl', scalername='volume_scaler_svr_V2_avgP.pkl')
+    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_V2_avgP.pkl', scalername='volume_scaler_svr_V2_avgP.pkl')
 
 
 
