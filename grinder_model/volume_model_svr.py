@@ -224,7 +224,7 @@ def main():
     print(grind_data)
 
     #drop unrelated columns
-    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material', 'index']
+    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material', 'index']
     grind_data = grind_data[related_columns]
 
     #desired output
@@ -238,7 +238,7 @@ def main():
     evaluate_model(best_model, best_X_test, best_y_test, OG_grind_data)
  
     #save model
-    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_W13_nogeom.pkl', scalername='volume_scaler_svr_W13_nogeom.pkl')
+    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_W13_withgeom.pkl', scalername='volume_scaler_svr_W13_withgeom.pkl')
 
 
 

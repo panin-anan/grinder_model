@@ -1,6 +1,6 @@
 import pandas as pd
 
-def downsample_data(input_file, output_file, num_points=40):
+def downsample_data(input_file, output_file, num_points=50):
     # Load the original data from the CSV file
     data = pd.read_csv(input_file)
     
