@@ -18,26 +18,19 @@ def preprocess_data(data, target_column, n_bootstrap=5):
     X = data.drop(columns=target_column)
     y = data[target_column]
 
-    index_drop_column = ['index']
-
     bootstrap_samples = []
 
     for _ in range(n_bootstrap):
         # Split data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=np.random.randint(0,100))
 
-        X_train_dropped = X_train.drop(columns=index_drop_column)
-        X_test_dropped = X_test.drop(columns=index_drop_column)
-
         # Feature scaling
         scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train_dropped)
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
 
-        X_test_scaled = scaler.transform(X_test_dropped)
-        X_test_final = np.hstack((X_test_scaled, X_test['index'].to_numpy().reshape(-1, 1)))
-
-        X_train = pd.DataFrame(X_train_scaled, columns=X_train_dropped.columns)
-        X_test = pd.DataFrame(X_test_final, columns=list(X_test_dropped.columns) + ['index'])
+        X_train = pd.DataFrame(X_train, columns=X.columns)
+        X_test = pd.DataFrame(X_test, columns=X.columns)
 
         bootstrap_samples.append((X_train, X_test, y_train, y_test, scaler))
 
@@ -77,17 +70,22 @@ def train_multi_svr_with_grid_search(X_train, y_train):
 
 
 def evaluate_model(model, X_test, y_test, OG_grind_data):
-    y_pred = model.predict(X_test.drop(columns=['index']))
+    y_pred = model.predict(X_test)
     
-    #take index of data which have area of 50.0 in OG_grind_data and if seen in X_test color them with different color
-    special_indices = OG_grind_data[OG_grind_data['grind_area'] < 55.0].index
-    highlight_mask = X_test['index'].isin(special_indices)
+    #take indices with specific area in OG_grind_data
+    special_grind_areas = OG_grind_data['grind_area'].unique()
+    highlight_masks = {
+        grind_area: y_test['index'].isin(OG_grind_data[OG_grind_data['grind_area'] == grind_area].index)
+        for grind_area in special_grind_areas
+    }
+
+    y_test_no_index = y_test.drop(columns=['index'])
 
     # Evaluate the model with Mean Squared Error and R^2 Score
-    mse = mean_squared_error(y_test, y_pred)
+    mse = mean_squared_error(y_test.drop(columns=['index']), y_pred)
     rmse = np.sqrt(mse) 
-    mean_abs = mean_absolute_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+    mean_abs = mean_absolute_error(y_test.drop(columns=['index']), y_pred)
+    r2 = r2_score(y_test.drop(columns=['index']), y_pred)
 
     print(f"Mean Absolute Error: {mean_abs}")
     print(f"RMS Error: {rmse}")
@@ -97,28 +95,36 @@ def evaluate_model(model, X_test, y_test, OG_grind_data):
     # Plot actual vs predicted for each output
     plt.figure(figsize=(12, 6))
     
-    for i, col in enumerate(y_test.columns):
-        plt.subplot(1, len(y_test.columns), i + 1)
-        # Plot points with grind_area of 50.0 in a different color
-        plt.scatter(y_test[col][highlight_mask], y_pred[highlight_mask, i], color='orange', label='grind_area = 50.0', alpha=0.7)
-        
+    for i, col in enumerate(y_test_no_index.columns):
+        plt.subplot(1, len(y_test_no_index.columns), i + 1)
+
+        # Plot each specific grind_area with a different color and include count in the label
+        colors = plt.cm.tab10(np.linspace(0, 1, len(special_grind_areas)))   # Define colors for each special grind_area
+        for j, (grind_area, mask) in enumerate(highlight_masks.items()):
+            count = mask.sum()  # Count the number of points for this grind_area
+            plt.scatter(y_test_no_index[col][mask], y_pred[mask, i], color=colors[j], 
+                        label=f'grind_area = {grind_area} (n={count})', alpha=0.7)
+
         # Plot all other points
-        plt.scatter(y_test[col][~highlight_mask], y_pred[~highlight_mask, i], color='blue', label='Other points', alpha=0.5)
-        
+        all_highlighted_mask = np.logical_or.reduce(list(highlight_masks.values()))
+        other_count = (~all_highlighted_mask).sum()
+        plt.scatter(y_test_no_index[col][~all_highlighted_mask], y_pred[~all_highlighted_mask, i], 
+                    color='blue', label=f'Other points (n={other_count})', alpha=0.5)
 
         # Set axis limits to be the same
-        min_val = min(min(y_test[col]), min(y_pred[:, i]))
-        max_val = max(max(y_test[col]), max(y_pred[:, i]))
+        min_val = min(min(y_test_no_index[col]), min(y_pred[:, i]))
+        max_val = max(max(y_test_no_index[col]), max(y_pred[:, i]))
         plt.xlim(min_val, max_val)
         plt.ylim(min_val, max_val)
-        
+
         # Plot reference diagonal line for perfect prediction
-        plt.plot([min_val, max_val], [min_val, max_val], color='red', linestyle='--')
+        plt.plot([min_val, max_val], [min_val, max_val], color='gray', linestyle='--')
 
         plt.xlabel(f"Actual {col}")
         plt.ylabel(f"Predicted {col}")
         plt.title(f"Actual vs Predicted {col}")
-    
+        plt.legend()
+
     plt.tight_layout()
     plt.show()
 
@@ -133,11 +139,11 @@ def train_and_select_best_model(grind_data, target_columns):
     # Train models on bootstrap samples and calculate MAE for each
     for i, (X_train, X_test, y_train, y_test, scaler) in enumerate(bootstrap_samples):
         # Train a model on each bootstrap sample
-        model = train_multi_svr_with_grid_search(X_train, y_train)
+        model = train_multi_svr_with_grid_search(X_train, y_train.drop(columns=['index']))
 
         # Evaluate model and calculate MAE
-        y_pred = model.predict(X_test.drop(columns=['index']))
-        mae = mean_absolute_error(y_test, y_pred)
+        y_pred = model.predict(X_test)
+        mae = mean_absolute_error(y_test.drop(columns=['index']), y_pred)
         
         # Store the model and its MAE
         models.append(model)
@@ -214,14 +220,15 @@ def main():
     grind_data = data_manager.filter_grind_data()
     grind_data['index'] = grind_data.index
     OG_grind_data = grind_data
+
     print(grind_data)
 
     #drop unrelated columns
-    related_columns = ['index', 'grind_time', 'avg_rpm', 'avg_force' , 'initial_wear', 'removed_material']
+    related_columns = ['grind_time', 'avg_rpm', 'avg_force' , 'initial_wear', 'removed_material', 'index']
     grind_data = grind_data[related_columns]
 
     #desired output
-    target_columns = ['removed_material']
+    target_columns = ['removed_material', 'index']
 
     # Train and select best model out of specified number of bootstrap
     best_model, best_scaler, best_X_test, best_y_test = train_and_select_best_model(grind_data, target_columns)
