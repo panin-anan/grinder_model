@@ -11,11 +11,9 @@ from tkinter import filedialog
 from sklearn.model_selection import GridSearchCV
 import os
 import joblib
-import random
+import pathlib
 
-def load_data(file_path):
-    #Load dataset from a CSV file.
-    return pd.read_csv(file_path)
+from data_manager import DataManager
 
 def preprocess_data(data, target_column):
     #Preprocess the data by splitting into features and target and then scaling.
@@ -43,10 +41,10 @@ def train_multi_svr_with_grid_search(X_train, y_train):
     """
     # Define the parameter grid
     param_grid = {
-        'estimator__C': [0.05, 0.1, 0.2, 0.5, 1, 5, 10, 20, 50, 100],
+        'estimator__C': [0.05, 0.1, 0.2, 0.5, 1, 5, 10, 20, 50, 100, 150],
         'estimator__gamma': [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3],
         'estimator__epsilon': [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3],
-        'estimator__kernel': ['rbf', 'sigmoid']
+        'estimator__kernel': ['rbf']
     }
 
 
@@ -70,6 +68,17 @@ def train_multi_svr_with_grid_search(X_train, y_train):
 
 def evaluate_model(model, X_test, y_test):
     y_pred = model.predict(X_test)
+    
+    # Evaluate the model with Mean Squared Error and R^2 Score
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse) 
+    mean_abs = mean_absolute_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    print(f"Mean Absolute Error: {mean_abs}")
+    print(f"RMS Error: {rmse}")
+    print(f"Mean Squared Error: {mse}")
+    print(f"R^2 Score: {r2}")
 
     # Plot actual vs predicted for each output
     plt.figure(figsize=(12, 6))
@@ -78,18 +87,6 @@ def evaluate_model(model, X_test, y_test):
         plt.subplot(1, len(y_test.columns), i + 1)
         plt.scatter(y_test[col], y_pred[:, i])
         
-        # Evaluate the model with Mean Squared Error and R^2 Score
-        mse = mean_squared_error(y_test[col], y_pred[:, i])
-        rmse = np.sqrt(mse) 
-        mean_abs = mean_absolute_error(y_test[col], y_pred[:, i])
-        r2 = r2_score(y_test[col], y_pred[:, i])
-
-        print(f"Column number: {i}")
-        print(f"Mean Absolute Error: {mean_abs}")
-        print(f"RMS Error: {rmse}")
-        print(f"Mean Squared Error: {mse}")
-        print(f"R^2 Score: {r2}")
-
         # Set axis limits to be the same
         min_val = min(min(y_test[col]), min(y_pred[:, i]))
         max_val = max(max(y_test[col]), max(y_pred[:, i]))
@@ -106,18 +103,10 @@ def evaluate_model(model, X_test, y_test):
     plt.tight_layout()
     plt.show()
 
-def open_file_dialog():
-    # Create a Tkinter window
-    root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    # Open file dialog and return selected file path
-    file_path = filedialog.askopenfilename(title="Select CSV file", filetypes=[("CSV files", "*.csv")])
-    return file_path
 
 def save_model(model, scaler, folder_name='saved_models', modelname='svr_model.pkl', scalername='scaler.pkl'):
     # Get the current working directory
-    current_dir = os.getcwd()
+    current_dir = pathlib.Path.cwd() / 'src' / 'grinder_model' 
 
     # Create the full path by joining the current directory with the folder name
     folder_path = os.path.join(current_dir, folder_name)
@@ -137,7 +126,7 @@ def save_model(model, scaler, folder_name='saved_models', modelname='svr_model.p
 
 def load_model(folder_name='saved_models', filename='svr_model.pkl'):
     # Get the current working directory
-    current_dir = os.getcwd()
+    current_dir = pathlib.Path.cwd() / 'src' / 'grinder_model' 
 
     # Create the full path by joining the current directory with the folder name
     folder_path = os.path.join(current_dir, folder_name)
@@ -153,44 +142,19 @@ def load_model(folder_name='saved_models', filename='svr_model.pkl'):
 
 def main():
     #read grind data
-    file_path = open_file_dialog()
-    if not file_path:
-        print("No file selected. Exiting.")
-        return
+    data_manager = DataManager()
+    grind_data = data_manager.load_data()
 
-    grind_data = load_data(file_path)
-
-    '''
-    #add data from another file
-    another_file_path = open_file_dialog()
-    if not another_file_path:
-        print("No second file selected. Continuing with the first file data.")
-    else:
-        additional_data = load_data(another_file_path)
-        # Assuming you're concatenating rows or merging based on a common column
-        grind_data = pd.concat([grind_data, additional_data], ignore_index=True)
-    '''
-    # Delete rows where removed_material is less than 12
-    grind_data = grind_data[grind_data['removed_material'] >= 5]
-
-    # Filter out points which have mad of more than 1000
-    grind_data = grind_data[grind_data['mad_rpm'] <= 1000]
-
-    # Filter out avg rpm that is lower than half of rpm_setpoint
-    grind_data = grind_data[grind_data['avg_rpm'] >= grind_data['rpm_setpoint'] / 2]
-
-    grind_data = grind_data[pd.isna(grind_data['failure_msg'])]
-
-    print(grind_data)
+    #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
+    grind_data = data_manager.filter_grind_data()
 
     #drop unrelated columns
-    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material']
+    #related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material', 'rpm_setpoint']
+    related_columns = ['avg_rpm', 'avg_force', 'rpm_setpoint']
     grind_data = grind_data[related_columns]
 
-    
-
     #desired output
-    target_columns = ['grind_time', 'avg_force']
+    target_columns = ['avg_rpm']
 
     # Preprocess the data (train the model using the CSV data, for example)
     X_train, X_test, y_train, y_test, scaler = preprocess_data(grind_data, target_columns)
@@ -204,7 +168,7 @@ def main():
     evaluate_model(best_model, X_test, y_test)
  
     #save model
-    save_model(best_model, scaler, folder_name='saved_models', modelname='grindparam_model_svr_V1.pkl', scalername='grindparam_scaler_svr_V1.pkl')
+    save_model(best_model, scaler, folder_name='saved_models', modelname='rpm_correction_model_svr_V1.pkl', scalername='rpm_correction_scaler_svr_V1.pkl')
 
 if __name__ == "__main__":
     main()
