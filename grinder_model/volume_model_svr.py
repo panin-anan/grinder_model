@@ -224,7 +224,7 @@ def main():
     print(grind_data)
 
     #drop unrelated columns
-    related_columns = ['grind_time', 'avg_rpm', 'avg_force' , 'initial_wear', 'removed_material', 'index']
+    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material', 'index']
     grind_data = grind_data[related_columns]
 
     #desired output
