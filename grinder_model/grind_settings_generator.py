@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 import pandas as pd
 import numpy as np
 
-from grindparam_predictor import load_model, load_scaler
+from volume_predictor_svr import load_model, load_scaler
 
 
 def volume_mismatch_penalty(x, volume, wear, model, scaler, rpm):

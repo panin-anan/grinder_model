@@ -7,7 +7,8 @@ import joblib
 import pathlib
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import matplotlib.pyplot as plt
-from volume_model_svr import open_file_dialog, load_data, filter_grind_data
+
+from data_manager import DataManager
 
 def load_model(use_fixed_path=False, fixed_path='saved_models/svr_model.pkl'):
     if use_fixed_path:
@@ -103,10 +104,18 @@ def evaluate_model(model, X_test, y_test):
     plt.tight_layout()
     plt.show()
 
+def open_file_dialog():
+    # Create a Tkinter window
+    root = tk.Tk()
+    root.withdraw()  # Hide the root window
+    # Open file dialog and return selected file path
+    file_path = filedialog.askopenfilename(title="Select CSV file", filetypes=[("CSV files", "*.csv")])
+    return file_path
+
 
 def main():
     #get grind model
-    use_fixed_model_path = True# Set this to True or False based on your need
+    use_fixed_model_path = False# Set this to True or False based on your need
     
     if use_fixed_model_path:
         # Specify the fixed model and scaler paths
@@ -146,14 +155,15 @@ def main():
     '''
     
     #load test data and evaluate model
-
     #read grind data
-    grind_data = load_data()
+    data_manager = DataManager()
+    grind_data = data_manager.load_data()
+
     #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
-    grind_data = filter_grind_data(grind_data)
+    grind_data = data_manager.filter_grind_data()
 
     #drop unrelated columns
-    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material']
+    related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material']
     grind_data = grind_data[related_columns]
 
     #desired output

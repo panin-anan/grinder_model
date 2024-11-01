@@ -6,59 +6,11 @@ from sklearn.svm import SVR
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import matplotlib.pyplot as plt
-import tkinter as tk
-from tkinter import filedialog
 from sklearn.model_selection import GridSearchCV
 import os
 import joblib
 
-def load_data():
-    # Initial file selection
-    file_path = open_file_dialog()
-    if not file_path:
-        print("No file selected. Exiting.")
-        return None
-
-    # Load the first file's data
-    grind_data = pd.read_csv(file_path)
-
-    # Loop to add more files if the user chooses
-    while True:
-        another_file_path = open_file_dialog()
-        if not another_file_path:
-            print("No more files selected. Moving forward with concatenated data.")
-            break
-
-        # Load and concatenate additional data
-        additional_data = pd.read_csv(another_file_path)
-        grind_data = pd.concat([grind_data, additional_data], ignore_index=True)
-        print("File added successfully. Would you like to add another file?")
-
-    print("All files loaded and concatenated.")
-    return grind_data
-
-def filter_grind_data(grind_data):
-    # Delete rows where removed_material is less than 3
-    grind_data = grind_data[grind_data['removed_material'] >= 3]
-
-    # Filter out points with mad_rpm greater than 1000
-    grind_data = grind_data[grind_data['mad_rpm'] <= 1000]
-
-    # Filter out rows where avg_rpm is less than half of rpm_setpoint
-    grind_data = grind_data[grind_data['avg_rpm'] >= grind_data['rpm_setpoint'] / 2]
-
-    # Remove rows with any failure messages
-    grind_data = grind_data[pd.isna(grind_data['failure_msg'])]
-
-    # Check for duplicate 'removed_material' values
-    duplicate_removed_material = grind_data[grind_data.duplicated(subset=['removed_material'], keep=False)]
-    if not duplicate_removed_material.empty:
-        print("Warning: Duplicate 'removed_material' values found:")
-        print(duplicate_removed_material)
-
-    print(grind_data)
-
-    return grind_data
+from data_manager import DataManager
 
 def preprocess_data(data, target_column, n_bootstrap=5):
     #Preprocess the data by splitting into features and target and then scaling.
@@ -66,19 +18,26 @@ def preprocess_data(data, target_column, n_bootstrap=5):
     X = data.drop(columns=target_column)
     y = data[target_column]
 
+    index_drop_column = ['index']
+
     bootstrap_samples = []
 
     for _ in range(n_bootstrap):
         # Split data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=np.random.randint(0,100))
 
+        X_train_dropped = X_train.drop(columns=index_drop_column)
+        X_test_dropped = X_test.drop(columns=index_drop_column)
+
         # Feature scaling
         scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_test = scaler.transform(X_test)
+        X_train_scaled = scaler.fit_transform(X_train_dropped)
 
-        X_train = pd.DataFrame(X_train, columns=X.columns)
-        X_test = pd.DataFrame(X_test, columns=X.columns)
+        X_test_scaled = scaler.transform(X_test_dropped)
+        X_test_final = np.hstack((X_test_scaled, X_test['index'].to_numpy().reshape(-1, 1)))
+
+        X_train = pd.DataFrame(X_train_scaled, columns=X_train_dropped.columns)
+        X_test = pd.DataFrame(X_test_final, columns=list(X_test_dropped.columns) + ['index'])
 
         bootstrap_samples.append((X_train, X_test, y_train, y_test, scaler))
 
@@ -117,9 +76,13 @@ def train_multi_svr_with_grid_search(X_train, y_train):
     return best_model
 
 
-def evaluate_model(model, X_test, y_test):
-    y_pred = model.predict(X_test)
+def evaluate_model(model, X_test, y_test, OG_grind_data):
+    y_pred = model.predict(X_test.drop(columns=['index']))
     
+    #take index of data which have area of 50.0 in OG_grind_data and if seen in X_test color them with different color
+    special_indices = OG_grind_data[OG_grind_data['grind_area'] < 55.0].index
+    highlight_mask = X_test['index'].isin(special_indices)
+
     # Evaluate the model with Mean Squared Error and R^2 Score
     mse = mean_squared_error(y_test, y_pred)
     rmse = np.sqrt(mse) 
@@ -136,8 +99,13 @@ def evaluate_model(model, X_test, y_test):
     
     for i, col in enumerate(y_test.columns):
         plt.subplot(1, len(y_test.columns), i + 1)
-        plt.scatter(y_test[col], y_pred[:, i])
+        # Plot points with grind_area of 50.0 in a different color
+        plt.scatter(y_test[col][highlight_mask], y_pred[highlight_mask, i], color='orange', label='grind_area = 50.0', alpha=0.7)
         
+        # Plot all other points
+        plt.scatter(y_test[col][~highlight_mask], y_pred[~highlight_mask, i], color='blue', label='Other points', alpha=0.5)
+        
+
         # Set axis limits to be the same
         min_val = min(min(y_test[col]), min(y_pred[:, i]))
         max_val = max(max(y_test[col]), max(y_pred[:, i]))
@@ -168,7 +136,7 @@ def train_and_select_best_model(grind_data, target_columns):
         model = train_multi_svr_with_grid_search(X_train, y_train)
 
         # Evaluate model and calculate MAE
-        y_pred = model.predict(X_test)
+        y_pred = model.predict(X_test.drop(columns=['index']))
         mae = mean_absolute_error(y_test, y_pred)
         
         # Store the model and its MAE
@@ -194,15 +162,6 @@ def train_and_select_best_model(grind_data, target_columns):
     _, best_X_test, _, best_y_test, _ = bootstrap_samples[closest_index]
 
     return best_model, best_scaler, best_X_test, best_y_test
-
-def open_file_dialog():
-    # Create a Tkinter window
-    root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    # Open file dialog and return selected file path
-    file_path = filedialog.askopenfilename(title="Select CSV file", filetypes=[("CSV files", "*.csv")])
-    return file_path
 
 def save_model(model, scaler, folder_name='saved_models', modelname='svr_model.pkl', scalername='scaler.pkl'):
     # Get the current working directory
@@ -248,12 +207,17 @@ def load_model(folder_name='saved_models', filename='svr_model.pkl'):
 
 def main():
     #read grind data
-    grind_data = load_data()
+    data_manager = DataManager()
+    grind_data = data_manager.load_data()
+
     #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
-    grind_data = filter_grind_data(grind_data)
+    grind_data = data_manager.filter_grind_data()
+    grind_data['index'] = grind_data.index
+    OG_grind_data = grind_data
+    print(grind_data)
 
     #drop unrelated columns
-    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area' , 'initial_wear', 'removed_material']
+    related_columns = ['index', 'grind_time', 'avg_rpm', 'avg_force' , 'initial_wear', 'removed_material']
     grind_data = grind_data[related_columns]
 
     #desired output
@@ -264,10 +228,10 @@ def main():
 
     # Optionally, evaluate the model on the test set
     #evaluate_model(best_model, X_train, y_train)
-    evaluate_model(best_model, best_X_test, best_y_test)
+    evaluate_model(best_model, best_X_test, best_y_test, OG_grind_data)
  
     #save model
-    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_W13_withgeom.pkl', scalername='volume_scaler_svr_W13_withgeom.pkl')
+    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_W13_nogeom.pkl', scalername='volume_scaler_svr_W13_nogeom.pkl')
 
 
 

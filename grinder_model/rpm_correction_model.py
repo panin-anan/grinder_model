@@ -13,9 +13,7 @@ import os
 import joblib
 import pathlib
 
-def load_data(file_path):
-    #Load dataset from a CSV file.
-    return pd.read_csv(file_path)
+from data_manager import DataManager
 
 def preprocess_data(data, target_column):
     #Preprocess the data by splitting into features and target and then scaling.
@@ -105,14 +103,6 @@ def evaluate_model(model, X_test, y_test):
     plt.tight_layout()
     plt.show()
 
-def open_file_dialog():
-    # Create a Tkinter window
-    root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    # Open file dialog and return selected file path
-    file_path = filedialog.askopenfilename(title="Select CSV file", filetypes=[("CSV files", "*.csv")])
-    return file_path
 
 def save_model(model, scaler, folder_name='saved_models', modelname='svr_model.pkl', scalername='scaler.pkl'):
     # Get the current working directory
@@ -152,40 +142,16 @@ def load_model(folder_name='saved_models', filename='svr_model.pkl'):
 
 def main():
     #read grind data
-    file_path = open_file_dialog()
-    if not file_path:
-        print("No file selected. Exiting.")
-        return
+    data_manager = DataManager()
+    grind_data = data_manager.load_data()
 
-    grind_data = load_data(file_path)
-
-    
-    #add data from another file
-    another_file_path = open_file_dialog()
-    if not another_file_path:
-        print("No second file selected. Continuing with the first file data.")
-    else:
-        additional_data = load_data(another_file_path)
-        # Assuming you're concatenating rows or merging based on a common column
-        grind_data = pd.concat([grind_data, additional_data], ignore_index=True)
-    
-    # Delete rows where removed_material is less than 12
-    grind_data = grind_data[grind_data['removed_material'] >= 5]
-
-    # Filter out points which have mad of more than 1000
-    grind_data = grind_data[grind_data['mad_rpm'] <= 1000]
-
-    # Filter out avg rpm that is lower than half of rpm_setpoint
-    grind_data = grind_data[grind_data['avg_rpm'] >= grind_data['rpm_setpoint'] / 2]
-
-    grind_data = grind_data[pd.isna(grind_data['failure_msg'])]
+    #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
+    grind_data = data_manager.filter_grind_data()
 
     #drop unrelated columns
     #related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material', 'rpm_setpoint']
     related_columns = ['avg_rpm', 'avg_force', 'rpm_setpoint']
     grind_data = grind_data[related_columns]
-
-    
 
     #desired output
     target_columns = ['avg_rpm']
