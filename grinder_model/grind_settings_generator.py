@@ -29,7 +29,7 @@ def generate_settings(volume, wear, model, scaler, rpm=11000):
     # x = [force, time]
     x = [5, 10]
     min_f, max_f = 3, 9
-    min_t, max_t = 5, np.inf
+    min_t, max_t = 5, 20
     result = minimize(volume_mismatch_penalty, x, args=(volume, wear, model, scaler, rpm),
                       bounds=((min_f, max_f), (min_t, max_t)))
 
