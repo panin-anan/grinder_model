@@ -88,6 +88,7 @@ def train_gbm_with_grid_search(X_train, y_train):
     # Initialize the Gradient Boosting Regressor
     gbr = GradientBoostingRegressor()
 
+
     # Use GridSearchCV to search for the best hyperparameters
     grid_search = GridSearchCV(gbr, param_grid, cv=5, scoring='neg_root_mean_squared_error', verbose=1, n_jobs=-1)
     grid_search.fit(X_train, y_train)
@@ -106,10 +107,10 @@ def train_multi_rf_with_grid_search(X_train, y_train):
     """
     # Define the parameter grid
     param_grid = {
-        'n_estimators': [50, 100, 200, 300, 500],  # Number of trees in the forest
-        'max_depth': [None, 1, 5, 10, 20],  # Maximum depth of the tree
+        'n_estimators': [50, 100, 200, 300],  # Number of trees in the forest
+        'max_depth': [5, 10, 20],  # Maximum depth of the tree
         'min_samples_split': [2, 5, 10],  # Minimum number of samples required to split an internal node
-        'min_samples_leaf': [1, 2, 4, 8],    # Minimum number of samples required to be at a leaf node
+        'min_samples_leaf': [2, 4, 8],    # Minimum number of samples required to be at a leaf node
         'bootstrap': [True, False]        # Whether bootstrap samples are used when building trees
     }
 
@@ -160,7 +161,8 @@ def train_polynomial_regression_with_grid_search(X_train, y_train):
 
 def evaluate_model(model, X_test, y_test, OG_grind_data):
     y_pred = model.predict(X_test)
-    
+    if y_pred.ndim == 1:
+        y_pred = y_pred.reshape(-1, 1)
     #take indices with specific area in OG_grind_data
     special_grind_areas = OG_grind_data['grind_area'].unique()
     highlight_masks = {
