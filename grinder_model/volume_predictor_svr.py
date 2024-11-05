@@ -74,8 +74,8 @@ def main():
     
     if use_fixed_model_path:
         # Specify the fixed model and scaler paths
-        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_W13_withgeom.pkl'
-        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_W13_withgeom.pkl'
+        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1_witharea.pkl'
+        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V1_witharea.pkl'
         
         grind_model = load_model(use_fixed_path=True, fixed_path=fixed_model_path)
         scaler = load_scaler(use_fixed_path=True, fixed_path=fixed_scaler_path)
@@ -84,7 +84,7 @@ def main():
         grind_model = load_model(use_fixed_path=False)
         scaler = load_scaler(use_fixed_path=False)
 
-    
+    '''
     #read current belt's 'initial wear', 'removed_volume', 'RPM' and predict 'Force' and 'grind_time'
     rpm_range = np.arange(10500, 11100, 100)  # from 8500 to 10000 in steps of 500
     force_range = np.arange(7, 9.1, 1)  # from 3 to 9 in steps of 1
@@ -120,8 +120,8 @@ def main():
     grind_data = data_manager.filter_grind_data()
     grind_data['index'] = grind_data.index
     OG_grind_data = grind_data
+    grind_data['initial_wear'] = grind_data['initial_wear']/2
 
-    print(grind_data)
 
     #drop unrelated columns
     related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material', 'index']
@@ -129,12 +129,39 @@ def main():
 
     #desired output
     target_columns = ['removed_material', 'index']
+    
+    '''
+    #test RPM Correction Model
+
+    #get grind model
+    use_fixed_model_path = True# Set this to True or False based on your need
+    
+    if use_fixed_model_path:
+        # Specify the fixed model and scaler paths
+        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_model_svr_W13.pkl'
+        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_scaler_svr_W13.pkl'
+        
+        grind_model = load_model(use_fixed_path=True, fixed_path=fixed_model_path)
+        scaler = load_scaler(use_fixed_path=True, fixed_path=fixed_scaler_path)
+    else:
+        # Load model and scaler using file dialogs
+        grind_model = load_model(use_fixed_path=False)
+        scaler = load_scaler(use_fixed_path=False)
+
+    related_columns = ['avg_rpm', 'avg_force', 'grind_area', 'rpm_setpoint', 'initial_wear', 'index']
+    grind_data = grind_data[related_columns]
+
+    #desired output
+    target_columns = ['avg_rpm', 'index']
+    '''
+
+
 
     # Preprocess the data (train the model using the CSV data, for example)
     X_test_scaled, y_test = preprocess_test_data(grind_data, target_columns, scaler)
 
     evaluate_model(grind_model, X_test_scaled, y_test, OG_grind_data)
-    '''
+    
 
 if __name__ == "__main__":
     main()

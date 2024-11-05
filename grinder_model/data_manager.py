@@ -48,6 +48,7 @@ class DataManager:
         # Remove rows with any failure messages
         self.grind_data = self.grind_data[pd.isna(self.grind_data['failure_msg'])]
 
+
         # Check for duplicate 'removed_material' values
         duplicate_removed_material = self.grind_data[self.grind_data.duplicated(subset=['removed_material'], keep=False)]
         if not duplicate_removed_material.empty:
