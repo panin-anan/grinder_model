@@ -7,16 +7,17 @@ import math
 from volume_predictor_svr import load_model, load_scaler
 
 
-def volume_mismatch_penalty(x, volume, wear, model, scaler, rpm):
-    predicted_volume = predict_volume(x[0], rpm, x[1], wear, model, scaler)
+def volume_mismatch_penalty(x, volume, wear, model, scaler, rpm, area):
+    predicted_volume = predict_volume(x[0], area, rpm, x[1], wear, model, scaler)
     return (volume - predicted_volume) ** 2
 
 
-def predict_volume(force, rpm, time, wear, model, scaler):
+def predict_volume(force, area, rpm, time, wear, model, scaler):
     input_data_dict = {
                        'grind_time': [time],
                        'avg_rpm': [rpm],
                        'avg_force': [force],
+                       'grind_area': [area],
                        'initial_wear': [wear]
     }
     input_df = pd.DataFrame(input_data_dict)
@@ -25,18 +26,20 @@ def predict_volume(force, rpm, time, wear, model, scaler):
     return predicted_volume
 
 
-def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11000):
+def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11000, area=0.00005):
     
     # x = [force, time]
     x = [5, 10]
     min_f, max_f = 3, 9
     min_t, max_t = 5, 20
-    result = minimize(volume_mismatch_penalty, x, args=(volume, wear, model, scaler, rpm),
+    result = minimize(volume_mismatch_penalty, x, args=(volume, wear, model, scaler, rpm, area),
                       bounds=((min_f, max_f), (min_t, max_t)))
 
     input_rpm_correction_data_dict = {
         'avg_force': [result.x[0]],
-        'rpm_setpoint': [rpm]
+        'grind_area': [area],
+        'rpm_setpoint': [rpm],
+        'initial_wear': [wear]
     }
     input_df = pd.DataFrame(input_rpm_correction_data_dict)
     input_scaled = rpm_scaler.transform(input_df)
@@ -49,7 +52,7 @@ def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11
                 'time': result.x[1],
                 'rpm': predicted_avg_rpm,
     }
-    predicted_volume = predict_volume(settings['force'], settings['rpm'], settings['time'], wear, model, scaler)
+    predicted_volume = predict_volume(settings['force'], area, settings['rpm'], settings['time'], wear, model, scaler)
     
     if vol > 130:
         mrr = predicted_volume / settings['time']
@@ -77,6 +80,7 @@ if __name__ == '__main__':
     removed_material = np.arange(40, 100, 20)
     wear_range = np.linspace(1e6, 3e6, 1)
     belt_width = 0.025                          #in m 
+    plate_thickness = 0.002                     #in m
     belt_angle = 0                              #in degree
     total_path_length = 0.1                     #in m, only for total time estimation
 
