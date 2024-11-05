@@ -87,8 +87,8 @@ def main():
     
     #read current belt's 'initial wear', 'removed_volume', 'RPM' and predict 'Force' and 'grind_time'
     rpm_range = np.arange(10500, 11100, 100)  # from 8500 to 10000 in steps of 500
-    force_range = np.arange(4, 5.1, 1)  # from 3 to 9 in steps of 1
-    time_range = np.arange(10.0, 10.5, 0.5)
+    force_range = np.arange(7, 9.1, 1)  # from 3 to 9 in steps of 1
+    time_range = np.arange(15.0, 15.5, 0.5)
     grind_area = 15
     initial_wear = 10000000
 
