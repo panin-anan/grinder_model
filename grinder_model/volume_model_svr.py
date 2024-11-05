@@ -224,12 +224,11 @@ def main():
     print(grind_data)
 
     #drop unrelated columns
-    #related_columns = [ 'grind_time', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material', 'rpm_setpoint']
-    related_columns = ['avg_rpm', 'avg_force', 'grind_area', 'rpm_setpoint', 'initial_wear', 'index']
+    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material', 'index']
     grind_data = grind_data[related_columns]
 
     #desired output
-    target_columns = ['avg_rpm', 'index']
+    target_columns = ['removed_material', 'index']
 
     # Train and select best model out of specified number of bootstrap
     best_model, best_scaler, best_X_test, best_y_test = train_and_select_best_model(grind_data, target_columns)
@@ -238,9 +237,10 @@ def main():
     #evaluate_model(best_model, X_train, y_train)
     evaluate_model(best_model, best_X_test, best_y_test, OG_grind_data)
  
- 
     #save model
-    save_model(best_model, best_scaler, folder_name='saved_models', modelname='rpm_correction_model_svr_W13.pkl', scalername='rpm_correction_scaler_svr_W13.pkl')
+    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_W13_withgeom.pkl', scalername='volume_scaler_svr_W13_withgeom.pkl')
+
+
 
 if __name__ == "__main__":
     main()

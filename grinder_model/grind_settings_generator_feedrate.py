@@ -63,13 +63,13 @@ def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11
 
 if __name__ == '__main__':
 
-    rpm_correction_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_model_svr_V1.pkl'
-    rpm_correction_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_scaler_svr_V1.pkl'
+    rpm_correction_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_model_svr_W13.pkl'
+    rpm_correction_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_scaler_svr_W13.pkl'
     rpm_correction_model = load_model(use_fixed_path=True, fixed_path=rpm_correction_model_path)
     rpm_correction_scaler = load_scaler(use_fixed_path=True, fixed_path=rpm_correction_scaler_path)
 
-    model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1.pkl'
-    scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V1.pkl'
+    model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_W13_withgeom.pkl'
+    scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_W13_withgeom.pkl'
 
     grind_model = load_model(use_fixed_path=True, fixed_path=model_path)
     grind_scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
@@ -78,6 +78,7 @@ if __name__ == '__main__':
     wear_range = np.linspace(1e6, 3e6, 1)
     belt_width = 0.025                          #in m 
     belt_angle = 0                              #in degree
+    total_path_length = 0.1                     #in m, only for total time estimation
 
     #TODO implement contact width or make belt_width into contact_area
     contact_width = belt_width * math.cos(math.radians(belt_angle))
@@ -86,7 +87,8 @@ if __name__ == '__main__':
         for wear in wear_range:
             grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, 10000)
             feed_rate = contact_width / grind_settings["time"]
-            print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}\n  Feed_rate: {feed_rate * 1000} mm/s')
+            total_time = total_path_length / feed_rate
+            print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time at each point: {grind_settings["time"]}\n  Feed_rate: {feed_rate * 1000} mm/s\n total time: {total_time} s')
             print(f'Removed material\n  input: {vol}\n  predicted: {predicted_volume_loss}')
 
 
