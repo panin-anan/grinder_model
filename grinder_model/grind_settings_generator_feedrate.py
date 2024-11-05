@@ -74,16 +74,18 @@ if __name__ == '__main__':
     grind_model = load_model(use_fixed_path=True, fixed_path=model_path)
     grind_scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
 
-    removed_material = np.arange(80, 200, 10)
-    wear_range = np.linspace(1e6, 3e6, 2)
+    removed_material = np.arange(40, 100, 20)
+    wear_range = np.linspace(1e6, 3e6, 1)
     belt_width = 0.025                          #in m 
-    belt_angle = 30                             #in degree
-    contact_width = belt_width * math.sin(math.radians(belt_angle))
+    belt_angle = 0                              #in degree
+
+    #TODO implement contact width or make belt_width into contact_area
+    contact_width = belt_width * math.cos(math.radians(belt_angle))
 
     for vol in removed_material:
         for wear in wear_range:
             grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, 10000)
-            feed_rate = belt_width / grind_settings["time"]
+            feed_rate = contact_width / grind_settings["time"]
             print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}\n  Feed_rate: {feed_rate * 1000} mm/s')
             print(f'Removed material\n  input: {vol}\n  predicted: {predicted_volume_loss}')
 
