@@ -74,8 +74,8 @@ def main():
     
     if use_fixed_model_path:
         # Specify the fixed model and scaler paths
-        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1_witharea.pkl'
-        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V1_witharea.pkl'
+        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_W15_testoldwear.pkl'
+        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_W15_testoldwear.pkl'
         
         grind_model = load_model(use_fixed_path=True, fixed_path=fixed_model_path)
         scaler = load_scaler(use_fixed_path=True, fixed_path=fixed_scaler_path)
@@ -119,9 +119,10 @@ def main():
     #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
     grind_data = data_manager.filter_grind_data()
     grind_data['index'] = grind_data.index
+    #grind_data = grind_data[grind_data['initial_wear'] > 4e6]
     OG_grind_data = grind_data
-    grind_data['initial_wear'] = grind_data['initial_wear']/2
 
+    print(grind_data)
 
     #drop unrelated columns
     related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material', 'index']
