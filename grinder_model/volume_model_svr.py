@@ -220,7 +220,7 @@ def main():
     grind_data = data_manager.filter_grind_data()
     grind_data['index'] = grind_data.index
     OG_grind_data = grind_data
-
+    
     print(grind_data)
 
     #drop unrelated columns
