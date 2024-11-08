@@ -68,14 +68,73 @@ def preprocess_test_data(data, target_column, scaler):
 
     return X_test_scaled, y_test
 
+def evaluate_model_ratetovolume(model, X_test, y_test, OG_grind_data):
+    y_pred = model.predict(X_test)
+    
+    #take indices with specific area in OG_grind_data
+    special_grind_areas = OG_grind_data['grind_area'].unique()
+    highlight_masks = {
+        grind_area: y_test['index'].isin(OG_grind_data[OG_grind_data['grind_area'] == grind_area].index)
+        for grind_area in special_grind_areas
+    }
+
+    y_test_no_index = y_test.drop(columns=['index'])
+
+    # Evaluate the model with Mean Squared Error and R^2 Score
+    mse = mean_squared_error(y_test.drop(columns=['index']), y_pred)
+    rmse = np.sqrt(mse) 
+    mean_abs = mean_absolute_error(y_test.drop(columns=['index']), y_pred)
+    r2 = r2_score(y_test.drop(columns=['index']), y_pred)
+
+    print(f"Mean Absolute Error: {mean_abs}")
+    print(f"RMS Error: {rmse}")
+    print(f"Mean Squared Error: {mse}")
+    print(f"R^2 Score: {r2}")
+
+    # Plot actual vs predicted for each output
+    plt.figure(figsize=(12, 6))
+    
+    for i, col in enumerate(y_test_no_index.columns):
+        plt.subplot(1, len(y_test_no_index.columns), i + 1)
+
+        # Plot each specific grind_area with a different color and include count in the label
+        colors = plt.cm.tab10(np.linspace(0, 1, len(special_grind_areas)))   # Define colors for each special grind_area
+        for j, (grind_area, mask) in enumerate(highlight_masks.items()):
+            count = mask.sum()  # Count the number of points for this grind_area
+            plt.scatter(y_test_no_index[col][mask], y_pred[mask, i], color=colors[j], 
+                        label=f'grind_area = {grind_area} (n={count})', alpha=0.7)
+
+        # Plot all other points
+        all_highlighted_mask = np.logical_or.reduce(list(highlight_masks.values()))
+        other_count = (~all_highlighted_mask).sum()
+        plt.scatter(y_test_no_index[col][~all_highlighted_mask], y_pred[~all_highlighted_mask, i], 
+                    color='blue', label=f'Other points (n={other_count})', alpha=0.5)
+
+        # Set axis limits to be the same
+        min_val = min(min(y_test_no_index[col]), min(y_pred[:, i]))
+        max_val = max(max(y_test_no_index[col]), max(y_pred[:, i]))
+        plt.xlim(min_val, max_val)
+        plt.ylim(min_val, max_val)
+
+        # Plot reference diagonal line for perfect prediction
+        plt.plot([min_val, max_val], [min_val, max_val], color='gray', linestyle='--')
+
+        plt.xlabel(f"Actual {col}")
+        plt.ylabel(f"Predicted {col}")
+        plt.title(f"Actual vs Predicted {col}")
+        plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
 def main():
     #get grind model
     use_fixed_model_path = True# Set this to True or False based on your need
     
     if use_fixed_model_path:
         # Specify the fixed model and scaler paths
-        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_W15_testoldwear.pkl'
-        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_W15_testoldwear.pkl'
+        fixed_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'FR_volume_model_svr_W13_withgeom.pkl'
+        fixed_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'FR_volume_scaler_svr_W13_withgeom.pkl'
         
         grind_model = load_model(use_fixed_path=True, fixed_path=fixed_model_path)
         scaler = load_scaler(use_fixed_path=True, fixed_path=fixed_scaler_path)
@@ -116,6 +175,16 @@ def main():
     data_manager = DataManager()
     grind_data = data_manager.load_data()
 
+    if 'feed_rate' not in grind_data.columns and 'num_pass' not in grind_data.columns and 'grind_time' in grind_data.columns:
+        belt_width = 0.025  # in meters
+        grind_data['feed_rate'] = belt_width / grind_data['grind_time']
+        grind_data['num_pass'] = 1          #make num_pass column with all data being 1
+        grind_data['removed_material_rate'] = grind_data['removed_material'] / grind_data['grind_time']
+
+    if 'feed_rate' in grind_data.columns and 'num_pass' in grind_data.columns and 'removed_material_rate' not in grind_data.columns:
+        grind_data['removed_material_rate'] = grind_data['removed_material'] / grind_data['grind_time']
+
+
     #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
     grind_data = data_manager.filter_grind_data()
     grind_data['index'] = grind_data.index
@@ -125,11 +194,11 @@ def main():
     print(grind_data)
 
     #drop unrelated columns
-    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material', 'index']
+    related_columns = ['feed_rate', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material_rate', 'index']
     grind_data = grind_data[related_columns]
 
     #desired output
-    target_columns = ['removed_material', 'index']
+    target_columns = ['removed_material_rate', 'index']
     
     '''
     #test RPM Correction Model

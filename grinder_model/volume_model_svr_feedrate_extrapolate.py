@@ -217,16 +217,34 @@ def main():
     grind_data = data_manager.load_data()
 
     #if there is no feed rate column but has grind_time column in grind data, add feed rate column
-    if 'feed_rate' not in grind_data.columns and 'grind_time' in grind_data.columns:
-        belt_width = 0.025  # in meters
-        grind_data['feed_rate'] = belt_width / grind_data['grind_time']
-        grind_data['removed_material_rate'] = grind_data['removed_material'] / grind_data['grind_time']
+    if 'feed_rate' not in grind_data.columns and 'num_pass' not in grind_data.columns and 'grind_time' in grind_data.columns:
 
-    if 'feed_rate' in grind_data.columns and 'removed_material_rate' not in grind_data.columns:
+        belt_width = 0.025  # in meters
+        plate_length = 0.075  # in meters
+        extrapolate_passes = [2, 3, 4]
+
+        # Create an empty DataFrame to hold the extended data
+        extended_grind_data = pd.DataFrame()
+
+        # Loop over each row in the original grind_data
+        for _, row in grind_data.iterrows():
+            # Generate new rows with varying 'num_pass' and corresponding 'feed_rate'
+            for num_pass in extrapolate_passes:
+                new_row = row.copy()
+                new_row['num_pass'] = num_pass
+                new_row['feed_rate'] = (num_pass * plate_length) / new_row['grind_time']
+                # Append the new row to the extended DataFrame
+                extended_grind_data = pd.concat([extended_grind_data, pd.DataFrame([new_row])], ignore_index=True)
+
+        # Now extended_grind_data contains the original data plus the extrapolated rows
+        grind_data = extended_grind_data
+        print(grind_data)
+
+    if 'feed_rate' in grind_data.columns and 'num_pass' in grind_data.columns and 'removed_material_rate' not in grind_data.columns:
         grind_data['removed_material_rate'] = grind_data['removed_material'] / grind_data['grind_time']
 
     #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
-    grind_data = data_manager.filter_grind_data()
+    grind_data = data_manager.filter_grind_data(grind_data)
     grind_data['index'] = grind_data.index
 
     OG_grind_data = grind_data
@@ -234,11 +252,11 @@ def main():
     print(grind_data)
 
     #drop unrelated columns
-    related_columns = ['feed_rate', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material_rate', 'index']
+    related_columns = ['feed_rate', 'num_pass', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material', 'index']
     grind_data = grind_data[related_columns]
 
     #desired output
-    target_columns = ['removed_material_rate', 'index']
+    target_columns = ['removed_material', 'index']
 
     # Train and select best model out of specified number of bootstrap
     best_model, best_scaler, best_X_test, best_y_test = train_and_select_best_model(grind_data, target_columns)

@@ -4,7 +4,7 @@ from tkinter import filedialog
 
 class DataManager:
     def __init__(self):
-        self.grind_data = None
+        grind_data = None
 
     def load_data(self):
         # Initial file selection
@@ -14,7 +14,7 @@ class DataManager:
             return None
 
         # Load the first file's data
-        self.grind_data = pd.read_csv(file_path)
+        grind_data = pd.read_csv(file_path)
 
         # Loop to add more files if the user chooses
         while True:
@@ -25,38 +25,40 @@ class DataManager:
 
             # Load and concatenate additional data
             additional_data = pd.read_csv(another_file_path)
-            self.grind_data = pd.concat([self.grind_data, additional_data], ignore_index=True)
+            grind_data = pd.concat([grind_data, additional_data], ignore_index=True)
             print("File added successfully. Would you like to add another file?")
 
         print("All files loaded and concatenated.")
-        return self.grind_data
+        return grind_data
 
-    def filter_grind_data(self):
-        if self.grind_data is None:
+    def filter_grind_data(self, grind_data):
+        if grind_data is None:
             print("No data loaded to filter.")
             return None
 
         # Delete rows where removed_material is less than 3
-        self.grind_data = self.grind_data[self.grind_data['removed_material'] >= 3]
+        grind_data = grind_data[grind_data['removed_material'] >= 3]
 
         # Filter out points with mad_rpm greater than 1000
-        self.grind_data = self.grind_data[self.grind_data['mad_rpm'] <= 1000]
+        grind_data = grind_data[grind_data['mad_rpm'] <= 1000]
 
         # Filter out rows where avg_rpm is less than half of rpm_setpoint
-        self.grind_data = self.grind_data[self.grind_data['avg_rpm'] >= self.grind_data['rpm_setpoint'] / 2]
+        grind_data = grind_data[grind_data['avg_rpm'] >= grind_data['rpm_setpoint'] / 2]
 
         # Remove rows with any failure messages
-        self.grind_data = self.grind_data[pd.isna(self.grind_data['failure_msg'])]
+        grind_data = grind_data[pd.isna(grind_data['failure_msg'])]
 
 
-        # Check for duplicate 'removed_material' values
-        duplicate_removed_material = self.grind_data[self.grind_data.duplicated(subset=['removed_material'], keep=False)]
-        if not duplicate_removed_material.empty:
-            print("Warning: Duplicate 'removed_material' values found:")
-            print(duplicate_removed_material)
+        # Check for duplicate rows in the entire DataFrame
+        duplicate_rows = grind_data[grind_data.duplicated(keep=False)]
 
-        #print(self.grind_data)
-        return self.grind_data
+        # If duplicate rows are found, print a warning and display the duplicates
+        if not duplicate_rows.empty:
+            print("Warning: Duplicate rows found in grind_data:")
+            print(duplicate_rows)
+
+        #print(grind_data)
+        return grind_data
 
     def open_file_dialog(self):
         # Create a Tkinter window
