@@ -59,7 +59,6 @@ def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11
         settings['time'] = volume / mrr
         predicted_volume = volume
 
-
     return settings, predicted_volume
 
 
@@ -77,7 +76,7 @@ if __name__ == '__main__':
     grind_model = load_model(use_fixed_path=True, fixed_path=model_path)
     grind_scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
 
-    removed_material_total = np.arange(80, 200, 10)
+    removed_material_total = np.arange(90, 220, 30)
     wear_range = np.linspace(1e6, 3e6, 2)
     belt_width = 0.025                          #in m 
     plate_thickness = 0.002                     #in m
@@ -94,7 +93,14 @@ if __name__ == '__main__':
             vol = vol_total * belt_width / total_path_length
             grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, set_rpm, grind_area)
 
-            print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}')
+            init_feed_rate = belt_width*1000 / grind_settings["time"]
+            feed_rate = init_feed_rate
+            num_pass = 1                                #initial number of pass
+            while feed_rate < 5.0:     #currently magic number for getting smooth grind profile and belt not getting stuck
+                num_pass = num_pass + 1
+                feed_rate = init_feed_rate * num_pass
+
+            print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}\n feed_rate: {feed_rate} mm/s\n num_pass: {num_pass}')
             print(f'Removed material\n  input: {vol}\n  predicted: {predicted_volume_loss}')
 
 
