@@ -76,13 +76,13 @@ if __name__ == '__main__':
     grind_model = load_model(use_fixed_path=True, fixed_path=model_path)
     grind_scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
 
-    removed_material_total = np.arange(90, 220, 30)
+    removed_material_total = np.arange(220, 400, 30)
     wear_range = np.linspace(1e6, 3e6, 2)
     belt_width = 0.025                          #in m 
     plate_thickness = 0.002                     #in m
     belt_angle = 0                              #in degree
     total_path_length = 0.075                     #in m, only for total time estimation
-    set_rpm = 10000
+    set_rpm = 11000
 
     #TODO implement contact width or make belt_width into contact_area
     contact_width = belt_width * math.cos(math.radians(belt_angle))
@@ -96,12 +96,13 @@ if __name__ == '__main__':
             init_feed_rate = belt_width*1000 / grind_settings["time"]
             feed_rate = init_feed_rate
             num_pass = 1                                #initial number of pass
-            while feed_rate < 5.0:     #currently magic number for getting smooth grind profile and belt not getting stuck
+            while feed_rate < 20.0:     #currently magic number for getting smooth grind profile and belt not getting stuck
                 num_pass = num_pass + 1
                 feed_rate = init_feed_rate * num_pass
 
-            print(f'\n\nSettings:\n  force: {grind_settings["force"]}\n  rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}\n feed_rate: {feed_rate} mm/s\n num_pass: {num_pass}')
-            print(f'Removed material\n  input: {vol}\n  predicted: {predicted_volume_loss}')
+            print(f'\n\nSettings set_rpm: {set_rpm}:\n  force: {grind_settings["force"]}\n  corrected_rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}\n feed_rate: {feed_rate} mm/s\n num_pass: {num_pass}')
+            print(f'Removed material Total for plate {total_path_length*1000} mm\n input: {vol_total}\n  predicted: {predicted_volume_loss*total_path_length/belt_width}')
+            print(f'Removed material factored\n  input: {vol}\n  predicted: {predicted_volume_loss}')
 
 
 
