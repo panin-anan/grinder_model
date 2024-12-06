@@ -42,6 +42,9 @@ class DataManager:
         # Filter out points with mad_rpm greater than 1000
         self.grind_data = self.grind_data[self.grind_data['mad_rpm'] <= 1000]
 
+        # Filter out points with mad_rpm greater than 1000
+        self.grind_data = self.grind_data[self.grind_data['avg_rpm'] < 11000.0]
+
         # Filter out rows where avg_rpm is less than half of rpm_setpoint
         self.grind_data = self.grind_data[self.grind_data['avg_rpm'] >= self.grind_data['rpm_setpoint'] / 2]
 
@@ -53,7 +56,8 @@ class DataManager:
         if not duplicate_removed_material.empty:
             print("Warning: Duplicate 'removed_material' values found:")
             print(duplicate_removed_material)
-
+        self.grind_data = self.grind_data.drop_duplicates(subset=['removed_material'], keep='first')
+        
         #print(self.grind_data)
         return self.grind_data
 

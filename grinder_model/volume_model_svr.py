@@ -128,6 +128,130 @@ def evaluate_model(model, X_test, y_test, OG_grind_data):
     plt.tight_layout()
     plt.show()
 
+def evaluate_model_time_tag(model, X_test, y_test, OG_grind_data):
+    y_pred = model.predict(X_test)
+    
+    # Round grind_time values to group similar areas
+    OG_grind_data['rounded_grind_time'] = OG_grind_data['grind_time'].round()
+    rounded_grind_times = OG_grind_data['rounded_grind_time'].unique()
+    
+    # Create masks for each rounded grind_time
+    highlight_masks = {
+        rounded_grind_time: y_test['index'].isin(OG_grind_data[OG_grind_data['rounded_grind_time'] == rounded_grind_time].index)
+        for rounded_grind_time in rounded_grind_times
+    }
+
+    y_test_no_index = y_test.drop(columns=['index'])
+
+    # Evaluate the model with Mean Squared Error and R^2 Score
+    mse = mean_squared_error(y_test_no_index, y_pred)
+    rmse = np.sqrt(mse) 
+    mean_abs = mean_absolute_error(y_test_no_index, y_pred)
+    r2 = r2_score(y_test_no_index, y_pred)
+
+    print(f"Mean Absolute Error: {mean_abs}")
+    print(f"RMS Error: {rmse}")
+    print(f"Mean Squared Error: {mse}")
+    print(f"R^2 Score: {r2}")
+
+    # Plot actual vs predicted for each output
+    plt.figure(figsize=(12, 6))
+    
+    for i, col in enumerate(y_test_no_index.columns):
+        plt.subplot(1, len(y_test_no_index.columns), i + 1)
+
+        # Plot each rounded grind_time with a different color and include count in the label
+        colors = plt.cm.tab10(np.linspace(0, 1, len(rounded_grind_times)))  # Define colors for each rounded_grind_time
+        for j, (rounded_grind_time, mask) in enumerate(highlight_masks.items()):
+            count = mask.sum()  # Count the number of points for this grind_time
+            plt.scatter(y_test_no_index[col][mask], y_pred[mask, i], color=colors[j], 
+                        label=f'grind_time ≈ {rounded_grind_time} (n={count})', alpha=0.7)
+
+        # Plot all other points
+        all_highlighted_mask = np.logical_or.reduce(list(highlight_masks.values()))
+        other_count = (~all_highlighted_mask).sum()
+        plt.scatter(y_test_no_index[col][~all_highlighted_mask], y_pred[~all_highlighted_mask, i], 
+                    color='blue', label=f'Other points (n={other_count})', alpha=0.5)
+
+        # Set axis limits to be the same
+        min_val = min(min(y_test_no_index[col]), min(y_pred[:, i]))
+        max_val = max(max(y_test_no_index[col]), max(y_pred[:, i]))
+        plt.xlim(min_val, max_val)
+        plt.ylim(min_val, max_val)
+
+        # Plot reference diagonal line for perfect prediction
+        plt.plot([min_val, max_val], [min_val, max_val], color='gray', linestyle='--')
+
+        plt.xlabel(f"Actual {col}")
+        plt.ylabel(f"Predicted {col}")
+        plt.title(f"Actual vs Predicted {col}")
+        plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+def evaluate_model_feed_rate_tag(model, X_test, y_test, OG_grind_data):
+    y_pred = model.predict(X_test)
+    
+    # Round feed_rate values to group similar areas
+    OG_grind_data['rounded_feed_rate'] = OG_grind_data['feed_rate'].round()
+    rounded_feed_rates = OG_grind_data['rounded_feed_rate'].unique()
+    
+    # Create masks for each rounded feed_rate
+    highlight_masks = {
+        rounded_feed_rate: y_test['index'].isin(OG_grind_data[OG_grind_data['rounded_feed_rate'] == rounded_feed_rate].index)
+        for rounded_feed_rate in rounded_feed_rates
+    }
+
+    y_test_no_index = y_test.drop(columns=['index', 'feed_rate'])
+
+    # Evaluate the model with Mean Squared Error and R^2 Score
+    mse = mean_squared_error(y_test_no_index, y_pred)
+    rmse = np.sqrt(mse) 
+    mean_abs = mean_absolute_error(y_test_no_index, y_pred)
+    r2 = r2_score(y_test_no_index, y_pred)
+
+    print(f"Mean Absolute Error: {mean_abs}")
+    print(f"RMS Error: {rmse}")
+    print(f"Mean Squared Error: {mse}")
+    print(f"R^2 Score: {r2}")
+
+    # Plot actual vs predicted for each output
+    plt.figure(figsize=(12, 6))
+    
+    for i, col in enumerate(y_test_no_index.columns):
+        plt.subplot(1, len(y_test_no_index.columns), i + 1)
+
+        # Plot each rounded feed_rate with a different color and include count in the label
+        colors = plt.cm.tab10(np.linspace(0, 1, len(rounded_feed_rates)))  # Define colors for each rounded_feed_rate
+        for j, (rounded_feed_rate, mask) in enumerate(highlight_masks.items()):
+            count = mask.sum()  # Count the number of points for this feed_rate
+            plt.scatter(y_test_no_index[col][mask], y_pred[mask, i], color=colors[j], 
+                        label=f'feed_rate ≈ {rounded_feed_rate} (n={count})', alpha=0.7)
+
+        # Plot all other points
+        all_highlighted_mask = np.logical_or.reduce(list(highlight_masks.values()))
+        other_count = (~all_highlighted_mask).sum()
+        plt.scatter(y_test_no_index[col][~all_highlighted_mask], y_pred[~all_highlighted_mask, i], 
+                    color='blue', label=f'Other points (n={other_count})', alpha=0.5)
+
+        # Set axis limits to be the same
+        min_val = min(min(y_test_no_index[col]), min(y_pred[:, i]))
+        max_val = max(max(y_test_no_index[col]), max(y_pred[:, i]))
+        plt.xlim(min_val, max_val)
+        plt.ylim(min_val, max_val)
+
+        # Plot reference diagonal line for perfect prediction
+        plt.plot([min_val, max_val], [min_val, max_val], color='gray', linestyle='--')
+
+        plt.xlabel(f"Actual {col}")
+        plt.ylabel(f"Predicted {col}")
+        plt.title(f"Actual vs Predicted {col}")
+        plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
 def train_and_select_best_model(grind_data, target_columns):
     # Preprocess the data (generate bootstrap samples)
     bootstrap_samples = preprocess_data(grind_data, target_columns)
@@ -139,11 +263,11 @@ def train_and_select_best_model(grind_data, target_columns):
     # Train models on bootstrap samples and calculate MAE for each
     for i, (X_train, X_test, y_train, y_test, scaler) in enumerate(bootstrap_samples):
         # Train a model on each bootstrap sample
-        model = train_multi_svr_with_grid_search(X_train, y_train.drop(columns=['index']))
+        model = train_multi_svr_with_grid_search(X_train, y_train.drop(columns=['index', 'feed_rate']))
 
         # Evaluate model and calculate MAE
         y_pred = model.predict(X_test)
-        mae = mean_absolute_error(y_test.drop(columns=['index']), y_pred)
+        mae = mean_absolute_error(y_test.drop(columns=['index', 'feed_rate']), y_pred)
         
         # Store the model and its MAE
         models.append(model)

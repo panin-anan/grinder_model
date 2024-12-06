@@ -76,12 +76,12 @@ if __name__ == '__main__':
     grind_model = load_model(use_fixed_path=True, fixed_path=model_path)
     grind_scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
 
-    removed_material_total = np.arange(220, 400, 30)
+    removed_material_total = np.arange(120, 200, 30)
     wear_range = np.linspace(1e6, 3e6, 2)
     belt_width = 0.025                          #in m 
     plate_thickness = 0.002                     #in m
     belt_angle = 0                              #in degree
-    total_path_length = 0.075                     #in m, only for total time estimation
+    total_path_length = 0.100                     #in m, only for total time estimation
     set_rpm = 11000
 
     #TODO implement contact width or make belt_width into contact_area
@@ -92,13 +92,13 @@ if __name__ == '__main__':
         for wear in wear_range:
             vol = vol_total * belt_width / total_path_length
             grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, set_rpm, grind_area)
-
-            init_feed_rate = belt_width*1000 / grind_settings["time"]
+            num_pass = 4            #init num pass
+            init_feed_rate = num_pass*belt_width*1000 / grind_settings["time"]
             feed_rate = init_feed_rate
-            num_pass = 1                                #initial number of pass
-            while feed_rate < 20.0:     #currently magic number for getting smooth grind profile and belt not getting stuck
-                num_pass = num_pass + 1
-                feed_rate = init_feed_rate * num_pass
+
+            #while feed_rate < 15.0:     #currently magic number for getting smooth grind profile and belt not getting stuck
+            #    num_pass = num_pass + 1
+            #    feed_rate = init_feed_rate * num_pass
 
             print(f'\n\nSettings set_rpm: {set_rpm}:\n  force: {grind_settings["force"]}\n  corrected_rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}\n feed_rate: {feed_rate} mm/s\n num_pass: {num_pass}')
             print(f'Removed material Total for plate {total_path_length*1000} mm\n input: {vol_total}\n  predicted: {predicted_volume_loss*total_path_length/belt_width}')

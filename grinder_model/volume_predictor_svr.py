@@ -7,7 +7,7 @@ import joblib
 import pathlib
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import matplotlib.pyplot as plt
-from volume_model_svr import evaluate_model
+from volume_model_svr import evaluate_model, evaluate_model_time_tag
 
 from data_manager import DataManager
 
@@ -68,6 +68,68 @@ def preprocess_test_data(data, target_column, scaler):
 
     return X_test_scaled, y_test
 
+def evaluate_model_feed_rate_tag(model, X_test, y_test, OG_grind_data):
+    y_pred = model.predict(X_test)
+    
+    # Round feed_rate values to group similar areas
+    OG_grind_data['rounded_feed_rate'] = OG_grind_data['feed_rate_setpoint'].round()
+    rounded_feed_rates = OG_grind_data['rounded_feed_rate'].unique()
+    
+    # Create masks for each rounded feed_rate
+    highlight_masks = {
+        rounded_feed_rate: y_test['index'].isin(OG_grind_data[OG_grind_data['rounded_feed_rate'] == rounded_feed_rate].index)
+        for rounded_feed_rate in rounded_feed_rates
+    }
+
+    y_test_no_index = y_test.drop(columns=['index', 'feed_rate_setpoint'])
+
+    # Evaluate the model with Mean Squared Error and R^2 Score
+    mse = mean_squared_error(y_test_no_index, y_pred)
+    rmse = np.sqrt(mse) 
+    mean_abs = mean_absolute_error(y_test_no_index, y_pred)
+    r2 = r2_score(y_test_no_index, y_pred)
+
+    print(f"Mean Absolute Error: {mean_abs}")
+    print(f"RMS Error: {rmse}")
+    print(f"Mean Squared Error: {mse}")
+    print(f"R^2 Score: {r2}")
+
+    # Plot actual vs predicted for each output
+    plt.figure(figsize=(12, 6))
+    
+    for i, col in enumerate(y_test_no_index.columns):
+        plt.subplot(1, len(y_test_no_index.columns), i + 1)
+
+        # Plot each rounded feed_rate with a different color and include count in the label
+        colors = plt.cm.tab10(np.linspace(0, 1, len(rounded_feed_rates)))  # Define colors for each rounded_feed_rate
+        for j, (rounded_feed_rate, mask) in enumerate(highlight_masks.items()):
+            count = mask.sum()  # Count the number of points for this feed_rate
+            plt.scatter(y_test_no_index[col][mask], y_pred[mask, i], color=colors[j], 
+                        label=f'feed_rate ≈ {rounded_feed_rate} (n={count})', alpha=0.7)
+
+        # Plot all other points
+        all_highlighted_mask = np.logical_or.reduce(list(highlight_masks.values()))
+        other_count = (~all_highlighted_mask).sum()
+        plt.scatter(y_test_no_index[col][~all_highlighted_mask], y_pred[~all_highlighted_mask, i], 
+                    color='blue', label=f'Other points (n={other_count})', alpha=0.5)
+
+        # Set axis limits to be the same
+        min_val = min(min(y_test_no_index[col]), min(y_pred[:, i]))
+        max_val = max(max(y_test_no_index[col]), max(y_pred[:, i]))
+        plt.xlim(min_val, max_val)
+        plt.ylim(min_val, max_val)
+
+        # Plot reference diagonal line for perfect prediction
+        plt.plot([min_val, max_val], [min_val, max_val], color='gray', linestyle='--')
+
+        plt.xlabel(f"Actual {col}")
+        plt.ylabel(f"Predicted {col}")
+        plt.title(f"Actual vs Predicted {col}")
+        plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
 def main():
     #get grind model
     use_fixed_model_path = True# Set this to True or False based on your need
@@ -86,12 +148,16 @@ def main():
 
     
     #read current belt's 'initial wear', 'removed_volume', 'RPM' and predict 'Force' and 'grind_time'
-    rpm_range = np.arange(10500, 11100, 100)  # from 8500 to 10000 in steps of 500
-    force_range = np.arange(4, 5.1, 1)  # from 3 to 9 in steps of 1
-    time_range = np.arange(10.0, 10.5, 0.5)
-    grind_area = 15
-    initial_wear = 10000000
-
+    rpm_range = np.arange(8500, 9510, 500)  # from 8500 to 10000 in steps of 500
+    force_range = np.arange(6, 6.1, 1)  # from 3 to 9 in steps of 1
+    time_range = np.arange(20.0, 20.5, 0.5)
+    grind_area = 50
+    initial_wear = 45000000
+    feed_rate = 10
+    num_pass = 8
+    pass_length = 100
+    belt_width = 25
+    
     for avg_rpm in rpm_range:
        for avg_force in force_range:
            for grind_time in time_range:
@@ -108,9 +174,10 @@ def main():
                 input_scaled = pd.DataFrame(input_scaled, columns=input_df.columns)
                 # Predict volume
                 predicted_volume = grind_model.predict(input_scaled)
+                predicted_total_vol = predicted_volume[0]*pass_length/belt_width
                 print(f"RPM: {avg_rpm}, Force: {avg_force}N, grind_area: {grind_area}mm^2, Grind Time: {grind_time} sec --> Predicted Removed Volume: {predicted_volume[0]}")
+                print(f"Grind Time: {grind_time} sec --> Feed_rate: {feed_rate} mm/s, Num_pass: {num_pass}, predicted_total_volume: {predicted_total_vol}")
     
-    '''
     #load test data and evaluate model
     #read grind data
     data_manager = DataManager()
@@ -119,22 +186,22 @@ def main():
     #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
     grind_data = data_manager.filter_grind_data()
     grind_data['index'] = grind_data.index
-    OG_grind_data = grind_data
+    OG_grind_data = grind_data                      #for tagging different parameter value settings in colors
 
     print(grind_data)
 
     #drop unrelated columns
-    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material', 'index']
+    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material', 'index', 'feed_rate_setpoint']
     grind_data = grind_data[related_columns]
 
     #desired output
-    target_columns = ['removed_material', 'index']
+    target_columns = ['removed_material', 'index', 'feed_rate_setpoint']
 
     # Preprocess the data (train the model using the CSV data, for example)
     X_test_scaled, y_test = preprocess_test_data(grind_data, target_columns, scaler)
 
-    evaluate_model(grind_model, X_test_scaled, y_test, OG_grind_data)
-    '''
-
+    evaluate_model_feed_rate_tag(grind_model, X_test_scaled, y_test, OG_grind_data)
+    
+    
 if __name__ == "__main__":
     main()
