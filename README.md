@@ -44,7 +44,7 @@ The grind data is preprocessed using the `DataManager` class, which:
 
 ## Usage
 
-### Data Input Format
+### volume_model_svr.py
 Typically, the grind data must contain the following columns:
 - `grind_time`
 - `avg_rpm`
@@ -55,3 +55,13 @@ Typically, the grind data must contain the following columns:
 
 User can change up input and output variables to study different relations by modifying `related_columns` and `target_columns` variables in `main()`.
 
+### volume_predictor_svr.py
+Select the saved model from `volume_model_svr.py` and use it to predict `removed_material` through manual input of grinding parameter settings.
+
+
+### grind_settings_generator.py
+With input of desired volume removal, automatically generate grinding parameter settings to achieve the desired removal through the use of the selected trained model from `volume_model_svr.py`. 
+Meant to be integrated in predictive grinding. Work in Progress.
+
+### model_sensitivity_analysis.py
+Perform sensitivity analysis on each individual grind setting parameters in order to assess how the model perceive their relations.
