@@ -15,7 +15,7 @@ from data_manager import DataManager
 def preprocess_data(data, target_column, n_bootstrap=5):
     #Preprocess the data by splitting into features and target and then scaling.
 
-    X = data.drop(columns=target_column)
+    X = data.drop(columns=['removed_material', 'index'])
     y = data[target_column]
 
     bootstrap_samples = []
@@ -194,7 +194,7 @@ def evaluate_model_feed_rate_tag(model, X_test, y_test, OG_grind_data):
     y_pred = model.predict(X_test)
     
     # Round feed_rate values to group similar areas
-    OG_grind_data['rounded_feed_rate'] = OG_grind_data['feed_rate'].round()
+    OG_grind_data['rounded_feed_rate'] = OG_grind_data['feed_rate_setpoint'].round()
     rounded_feed_rates = OG_grind_data['rounded_feed_rate'].unique()
     
     # Create masks for each rounded feed_rate
@@ -203,7 +203,7 @@ def evaluate_model_feed_rate_tag(model, X_test, y_test, OG_grind_data):
         for rounded_feed_rate in rounded_feed_rates
     }
 
-    y_test_no_index = y_test.drop(columns=['index', 'feed_rate'])
+    y_test_no_index = y_test.drop(columns=['index', 'feed_rate_setpoint'])
 
     # Evaluate the model with Mean Squared Error and R^2 Score
     mse = mean_squared_error(y_test_no_index, y_pred)
@@ -263,11 +263,11 @@ def train_and_select_best_model(grind_data, target_columns):
     # Train models on bootstrap samples and calculate MAE for each
     for i, (X_train, X_test, y_train, y_test, scaler) in enumerate(bootstrap_samples):
         # Train a model on each bootstrap sample
-        model = train_multi_svr_with_grid_search(X_train, y_train.drop(columns=['index', 'feed_rate']))
+        model = train_multi_svr_with_grid_search(X_train, y_train.drop(columns=['index', 'feed_rate_setpoint']))
 
         # Evaluate model and calculate MAE
         y_pred = model.predict(X_test)
-        mae = mean_absolute_error(y_test.drop(columns=['index', 'feed_rate']), y_pred)
+        mae = mean_absolute_error(y_test.drop(columns=['index', 'feed_rate_setpoint']), y_pred)
         
         # Store the model and its MAE
         models.append(model)
@@ -348,21 +348,21 @@ def main():
     print(grind_data)
 
     #drop unrelated columns
-    related_columns = ['grind_time', 'avg_rpm', 'avg_force', 'grind_area', 'initial_wear', 'removed_material', 'index']
+    related_columns = ['feed_rate_setpoint', 'num_pass_setpoint', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material', 'index']
     grind_data = grind_data[related_columns]
 
     #desired output
-    target_columns = ['removed_material', 'index']
+    target_columns = ['removed_material', 'index', 'feed_rate_setpoint']
 
     # Train and select best model out of specified number of bootstrap
     best_model, best_scaler, best_X_test, best_y_test = train_and_select_best_model(grind_data, target_columns)
 
     # Optionally, evaluate the model on the test set
     #evaluate_model(best_model, X_train, y_train)
-    evaluate_model(best_model, best_X_test, best_y_test, OG_grind_data)
+    evaluate_model_feed_rate_tag(best_model, best_X_test, best_y_test, OG_grind_data)
  
     #save model
-    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_W13_withgeom.pkl', scalername='volume_scaler_svr_W13_withgeom.pkl')
+    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_W18_movinggrind.pkl', scalername='volume_scaler_svr_W18_movinggrind.pkl')
 
 
 
