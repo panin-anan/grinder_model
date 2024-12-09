@@ -53,5 +53,5 @@ Typically, the grind data must contain the following columns:
 - `initial_wear`
 - `removed_material`
 
-User can change up input and output variables to study different relations by modifying `related_columns` and `target_columns` variables in main.
+User can change up input and output variables to study different relations by modifying `related_columns` and `target_columns` variables in `main()`.
 
