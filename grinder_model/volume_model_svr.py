@@ -15,7 +15,7 @@ from data_manager import DataManager
 def preprocess_data(data, target_column, n_bootstrap=5):
     #Preprocess the data by splitting into features and target and then scaling.
 
-    X = data.drop(columns=['removed_material', 'index'])
+    X = data.drop(columns=['removed_material_ppass', 'index'])
     y = data[target_column]
 
     bootstrap_samples = []
@@ -344,15 +344,16 @@ def main():
     grind_data = data_manager.filter_grind_data()
     grind_data['index'] = grind_data.index
     OG_grind_data = grind_data
+    grind_data['removed_material_ppass'] = grind_data['removed_material'] / grind_data['num_pass_setpoint']
 
     print(grind_data)
 
     #drop unrelated columns
-    related_columns = ['feed_rate_setpoint', 'num_pass_setpoint', 'avg_rpm', 'avg_force', 'initial_wear', 'removed_material', 'index']
+    related_columns = ['feed_rate_setpoint', 'avg_force', 'initial_wear', 'removed_material_ppass', 'index']
     grind_data = grind_data[related_columns]
 
     #desired output
-    target_columns = ['removed_material', 'index', 'feed_rate_setpoint']
+    target_columns = ['removed_material_ppass', 'index', 'feed_rate_setpoint']
 
     # Train and select best model out of specified number of bootstrap
     best_model, best_scaler, best_X_test, best_y_test = train_and_select_best_model(grind_data, target_columns)
