@@ -45,6 +45,9 @@ class DataManager:
         # Filter out points with mad_rpm greater than 1000
         self.grind_data = self.grind_data[self.grind_data['avg_rpm'] < 11000.0]
 
+        # Filter out points with mad_rpm greater than 1000
+        #self.grind_data = self.grind_data[self.grind_data['feed_rate_setpoint'] > 11.0]
+
         # Filter out rows where avg_rpm is less than half of rpm_setpoint
         self.grind_data = self.grind_data[self.grind_data['avg_rpm'] >= self.grind_data['rpm_setpoint'] / 2]
 

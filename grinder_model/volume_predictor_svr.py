@@ -148,11 +148,11 @@ def main():
 
     
     #read current belt's 'initial wear', 'removed_volume', 'RPM' and predict 'Force' and 'grind_time'
-    rpm_range = np.arange(8500, 9510, 500)  # from 8500 to 10000 in steps of 500
-    force_range = np.arange(5, 5.1, 1)  # from 3 to 9 in steps of 1
+    rpm_range = np.arange(9000, 9510, 500)  # from 8500 to 10000 in steps of 500
+    force_range = np.arange(6, 6.1, 1)  # from 3 to 9 in steps of 1
     time_range = np.arange(12.5, 12.6, 0.5)
     grind_area = 50
-    initial_wear = 40000000
+    initial_wear = 30000000
     feed_rate = 10
     num_pass = 8
     pass_length = 100
@@ -186,6 +186,7 @@ def main():
     #filter out points that has high mad_rpm, material removal of less than 5, duplicates, failure msg detected
     grind_data = data_manager.filter_grind_data()
     grind_data['index'] = grind_data.index
+    grind_data['grind_time'] = grind_data['contact_time'] / 4
     OG_grind_data = grind_data                      #for tagging different parameter value settings in colors
 
     print(grind_data)
