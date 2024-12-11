@@ -76,10 +76,10 @@ if __name__ == '__main__':
     grind_model = load_model(use_fixed_path=True, fixed_path=model_path)
     grind_scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
 
-    removed_material = [50]
-    wear_range = [3e7]                            #np.linspace(1e6, 3e6, 2)
-    belt_width = 0.025                          #in m 
-    plate_thickness = 0.002                     #in m
+    removed_material = [30]
+    wear_range = [3e7]                          #np.linspace(1e6, 3e6, 2)
+    belt_width = 25                          #in mm
+    plate_thickness = 2                     #in mm
     belt_angle = 0                              #in degree
     total_path_length = 0.122                   #in m, only for total time estimation
     set_rpm = 9500
@@ -93,13 +93,14 @@ if __name__ == '__main__':
         for wear in wear_range:
 
             grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, set_rpm, grind_area)
-            init_num_pass = init_feed_rate * grind_settings["time"] / (belt_width * 1000)
+            init_num_pass = init_feed_rate * grind_settings["time"] / (belt_width)
             num_pass = np.round(init_num_pass)
-            feed_rate = num_pass*belt_width * 1000 / grind_settings["time"]
+            feed_rate = num_pass*belt_width  / grind_settings["time"]
 
             print(f'\n\nSettings set_rpm: {set_rpm}:\n  force: {grind_settings["force"]}\n  corrected_rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}\n feed_rate: {feed_rate} mm/s\n num_pass: {num_pass}')
             # print(f'Removed material Total for plate {total_path_length*1000} mm\n input: {vol_total}\n  predicted: {predicted_volume_loss*total_path_length/belt_width}')
             print(f'Removed material factored\n  input: {vol}\n  predicted: {predicted_volume_loss}')
+            print(f"Removal depth [mm]: {predicted_volume_loss / (plate_thickness *  belt_width)}")
 
 
 
