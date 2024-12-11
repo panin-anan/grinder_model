@@ -149,8 +149,8 @@ def main():
     
     #read current belt's 'initial wear', 'removed_volume', 'RPM' and predict 'Force' and 'grind_time'
     rpm_range = np.arange(9000, 9510, 500)  # from 8500 to 10000 in steps of 500
-    force_range = np.arange(6, 6.1, 1)  # from 3 to 9 in steps of 1
-    time_range = np.arange(12.5, 12.6, 0.5)
+    force_range = np.arange(5, 5.1, 1)  # from 3 to 9 in steps of 1
+    time_range = np.arange(15.0, 15.1, 0.5)
     grind_area = 50
     initial_wear = 30000000
     feed_rate = 10
@@ -176,7 +176,7 @@ def main():
                 predicted_volume = grind_model.predict(input_scaled)
                 predicted_total_vol = predicted_volume[0]*pass_length/belt_width
                 print(f"RPM: {avg_rpm}, Force: {avg_force}N, grind_area: {grind_area}mm^2, Grind Time: {grind_time} sec --> Predicted Removed Volume: {predicted_volume[0]}")
-                print(f"Grind Time: {grind_time} sec --> Feed_rate: {feed_rate} mm/s, Num_pass: {num_pass}, predicted_total_volume: {predicted_total_vol}")
+                #print(f"Grind Time: {grind_time} sec --> Feed_rate: {feed_rate} mm/s, Num_pass: {num_pass}, predicted_total_volume: {predicted_total_vol}")
     
     #load test data and evaluate model
     #read grind data

@@ -30,27 +30,27 @@ def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11
     
     # x = [force, time]
     x = [5, 10]
-    min_f, max_f = 3, 9
-    min_t, max_t = 5, 20
+    min_f, max_f = 3, 6
+    min_t, max_t = 10, 20
     result = minimize(volume_mismatch_penalty, x, args=(volume, wear, model, scaler, rpm, area),
                       bounds=((min_f, max_f), (min_t, max_t)))
 
-    input_rpm_correction_data_dict = {
-        'avg_force': [result.x[0]],
-        'grind_area': [area],
-        'rpm_setpoint': [rpm],
-        'initial_wear': [wear]
-    }
-    input_df = pd.DataFrame(input_rpm_correction_data_dict)
-    input_scaled = rpm_scaler.transform(input_df)
-    input_scaled = pd.DataFrame(input_scaled, columns=input_df.columns)
-    predicted_avg_rpm = rpm_model.predict(input_scaled)
+    # input_rpm_correction_data_dict = {
+    #     'avg_force': [result.x[0]],
+    #     'grind_area': [area],
+    #     'rpm_setpoint': [rpm],
+    #     'initial_wear': [wear]
+    # }
+    # input_df = pd.DataFrame(input_rpm_correction_data_dict)
+    # input_scaled = rpm_scaler.transform(input_df)
+    # input_scaled = pd.DataFrame(input_scaled, columns=input_df.columns)
+    #predicted_avg_rpm = rpm_model.predict(input_scaled)
 
 
     settings = {
                 'force': result.x[0],
                 'time': result.x[1],
-                'rpm': predicted_avg_rpm,
+                'rpm': rpm,
     }
     predicted_volume = predict_volume(settings['force'], area, settings['rpm'], settings['time'], wear, model, scaler)
     
@@ -76,32 +76,29 @@ if __name__ == '__main__':
     grind_model = load_model(use_fixed_path=True, fixed_path=model_path)
     grind_scaler = load_scaler(use_fixed_path=True, fixed_path=scaler_path)
 
-    removed_material_total = np.arange(120, 200, 30)
-    wear_range = np.linspace(1e6, 3e6, 2)
+    removed_material = [50]
+    wear_range = [3e7]                            #np.linspace(1e6, 3e6, 2)
     belt_width = 0.025                          #in m 
     plate_thickness = 0.002                     #in m
     belt_angle = 0                              #in degree
-    total_path_length = 0.100                     #in m, only for total time estimation
-    set_rpm = 11000
+    total_path_length = 0.122                   #in m, only for total time estimation
+    set_rpm = 9500
+    init_feed_rate = 20
 
     #TODO implement contact width or make belt_width into contact_area
     contact_width = belt_width * math.cos(math.radians(belt_angle))
     grind_area = belt_width * plate_thickness
 
-    for vol_total in removed_material_total:
+    for vol in removed_material:
         for wear in wear_range:
-            vol = vol_total * belt_width / total_path_length
-            grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, set_rpm, grind_area)
-            num_pass = 4            #init num pass
-            init_feed_rate = num_pass*belt_width*1000 / grind_settings["time"]
-            feed_rate = init_feed_rate
 
-            #while feed_rate < 15.0:     #currently magic number for getting smooth grind profile and belt not getting stuck
-            #    num_pass = num_pass + 1
-            #    feed_rate = init_feed_rate * num_pass
+            grind_settings, predicted_volume_loss = generate_settings(vol, wear, grind_model, grind_scaler, rpm_correction_model, rpm_correction_scaler, set_rpm, grind_area)
+            init_num_pass = init_feed_rate * grind_settings["time"] / (belt_width * 1000)
+            num_pass = np.round(init_num_pass)
+            feed_rate = num_pass*belt_width * 1000 / grind_settings["time"]
 
             print(f'\n\nSettings set_rpm: {set_rpm}:\n  force: {grind_settings["force"]}\n  corrected_rpm:{grind_settings["rpm"]}\n  time: {grind_settings["time"]}\n feed_rate: {feed_rate} mm/s\n num_pass: {num_pass}')
-            print(f'Removed material Total for plate {total_path_length*1000} mm\n input: {vol_total}\n  predicted: {predicted_volume_loss*total_path_length/belt_width}')
+            # print(f'Removed material Total for plate {total_path_length*1000} mm\n input: {vol_total}\n  predicted: {predicted_volume_loss*total_path_length/belt_width}')
             print(f'Removed material factored\n  input: {vol}\n  predicted: {predicted_volume_loss}')
 
 
