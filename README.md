@@ -75,13 +75,26 @@ Contain two usages that user will be prompted to select:
 
 
 ### grind_settings_generator.py
-With input of desired volume removal, automatically generate grinding parameter settings to achieve the desired removal through the use of the selected trained model from `volume_model_svr.py`. 
-Meant to be integrated in predictive grinding. Work in Progress.
+With input of desired volume removal, automatically generate grinding parameter settings to achieve the desired removal through the use of a selected trained model by the user.
+Model and scaler file path must be inputted in `main()`
+
+Meant to be integrated in predictive grinding. (Work in Progress)
 
 ### model_sensitivity_analysis.py
-Perform sensitivity analysis on each individual grind setting parameters in order to assess how the model perceive their relations.
+Perform sensitivity analysis on each individual grind setting parameters in order to assess how the model perceive their relations with grinding removed volume.
+A set of base values and variation ranges for the grinding parameter variables are set manually in `main`.
 
 
-## Existing model and example
+### rpm_correction_model.py
+ONLY USE THIS WHEN RPM_SETPOINT AND ACTUAL RPM DIFFERS A LOT
+Script for training model to compensate for when flow rate is limited.
+
+
+## Existing model and examples
+
+
+model_sensitivity_analysis script output from existing saved model
+![image](https://github.com/user-attachments/assets/719e9046-9979-48d1-b76d-33503f387e3b)
+
 
 
