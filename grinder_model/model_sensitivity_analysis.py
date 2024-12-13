@@ -288,22 +288,20 @@ def predict_volume(model, scaler, data_row):
 def main():
     # Define paths for the three models and scalers
     model_paths = [
-        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1.pkl',
-        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V2_avgP.pkl',
-        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V3_doublearea.pkl'
+        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_V1_OG_withgeom.pkl',
+        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_W13_withgeom.pkl'
     ]
     
     scaler_paths = [
         pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V1.pkl',
-        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V2_avgP.pkl',
-        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_V3_doublearea.pkl'
+        pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_W13_withgeom.pkl'
     ]
 
     # Load all models and scalers
     models = [load_model(use_fixed_path=True, fixed_path=path) for path in model_paths]
     scalers = [load_scaler(use_fixed_path=True, fixed_path=path) for path in scaler_paths]
 
-    grind_areas = [50, 50, 98]
+    grind_areas = [50, 50]
     target_pressure = 0.09  # Adjust this value based on your application
     # Define base data for sensitivity analysis (excluding avg_force to be calculated)
     base_data_template = {
