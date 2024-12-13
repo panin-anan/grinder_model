@@ -83,7 +83,6 @@ if __name__ == '__main__':
     belt_width = 25                          #in mm
     plate_thickness = 2                     #in mm
     belt_angle = 0                              #in degree
-    total_path_length = 0.122                   #in m, only for total time estimation
     set_rpm = 9500
     init_feed_rate = 20
 
