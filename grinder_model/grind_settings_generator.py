@@ -87,7 +87,7 @@ if __name__ == '__main__':
     set_rpm = 9500
     init_feed_rate = 20
 
-    #TODO implement contact width or make belt_width into contact_area
+
     contact_width = belt_width * math.cos(math.radians(belt_angle))
     grind_area = belt_width * plate_thickness
 
