@@ -28,13 +28,14 @@ def predict_volume(force, area, rpm, time, wear, model, scaler):
 
 def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11000, area=0.00005):
     
-    # x = [force, time]
+    # x = [force, time] initial guess value
     x = [5, 10]
     min_f, max_f = 3, 6
     min_t, max_t = 10, 20
     result = minimize(volume_mismatch_penalty, x, args=(volume, wear, model, scaler, rpm, area),
                       bounds=((min_f, max_f), (min_t, max_t)))
 
+    # For cases where rpm setpoint and actual avg_rpm are not the same.
     # input_rpm_correction_data_dict = {
     #     'avg_force': [result.x[0]],
     #     'grind_area': [area],
@@ -45,7 +46,6 @@ def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11
     # input_scaled = rpm_scaler.transform(input_df)
     # input_scaled = pd.DataFrame(input_scaled, columns=input_df.columns)
     #predicted_avg_rpm = rpm_model.predict(input_scaled)
-
 
     settings = {
                 'force': result.x[0],
@@ -64,12 +64,14 @@ def generate_settings(volume, wear, model, scaler, rpm_model, rpm_scaler, rpm=11
 
 
 if __name__ == '__main__':
-
+    # RPM correction model is for when test setup is limited in flow rate, 
+    # set rpm and actual avg__rpm will have noticable difference and rpm correction model need to be used.
     rpm_correction_model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_model_svr_W13.pkl'
     rpm_correction_scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'rpm_correction_scaler_svr_W13.pkl'
     rpm_correction_model = load_model(use_fixed_path=True, fixed_path=rpm_correction_model_path)
     rpm_correction_scaler = load_scaler(use_fixed_path=True, fixed_path=rpm_correction_scaler_path)
 
+    # load predictive model
     model_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_model_svr_W13_withgeom.pkl'
     scaler_path = pathlib.Path.cwd() / 'src' / 'grinder_model' / 'saved_models' / 'volume_scaler_svr_W13_withgeom.pkl'
 
