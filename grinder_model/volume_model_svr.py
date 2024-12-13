@@ -212,6 +212,9 @@ def load_model(folder_name='saved_models', filename='svr_model.pkl'):
 
 
 def main():
+    model_file_name = 'volume_model_svr_W13_withgeom.pkl'
+    scaler_file_name = 'volume_scaler_svr_W13_withgeom.pkl'
+
     #read grind data
     data_manager = DataManager()
     grind_data = data_manager.load_data()
@@ -238,7 +241,7 @@ def main():
     evaluate_model(best_model, best_X_test, best_y_test, OG_grind_data)
  
     #save model
-    save_model(best_model, best_scaler, folder_name='saved_models', modelname='volume_model_svr_W13_withgeom.pkl', scalername='volume_scaler_svr_W13_withgeom.pkl')
+    save_model(best_model, best_scaler, folder_name='saved_models', modelname=model_file_name, scalername=scaler_file_name)
 
 
 
