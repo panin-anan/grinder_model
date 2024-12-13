@@ -89,11 +89,48 @@ A set of base values and variation ranges for the grinding parameter variables a
 ONLY USE THIS WHEN RPM_SETPOINT AND ACTUAL RPM DIFFERS A LOT
 Script for training model to compensate for when flow rate is limited.
 
+---
 
 ## Existing model and examples
 
+### Stationary grind model training
+Before starting the script, input desired model and scaler file name in `main()` for saving the model in the `saved_model` folder
+Start the script by running
+```bash
+python3 src/grinder_model/grinder_model/volume_model_svr.py 
+```
+The program will endlessly prompt for user to select test data in .csv file format to input.
+After the user becomes content with the amount of data file selected, just press cancel for the program to continue the next step.
+![image](https://github.com/user-attachments/assets/569c7767-62b0-4a97-9254-b7c3742823ec)
 
-model_sensitivity_analysis script output from existing saved model
+The program will then use the selected data to train and test the model based on SVR method, outputting a model performance graph shown below:
+
+![image](https://github.com/user-attachments/assets/c933ebe2-62ba-4705-b9e2-c163fad44d41)
+
+
+---
+### Generate Grind setting
+First set file path for model and scaler you wish to use, then input all the necessary constants for grinding parameters (such as rpm and belt width)
+Note: with current iteration, RPM must be set by user to narrow down range of operation for grind settings.
+Start the script by running
+
+```bash
+python3 src/grinder_model/grinder_model/grind_settings_generator.py 
+```
+
+The settings to achieve the input desired removal material volume should print out on the terminal:
+
+![image](https://github.com/user-attachments/assets/3b87fcc8-0700-4f53-a612-d7916e4c39e9)
+
+
+
+---
+### Sensitivity Analysis
+First set file path for model and scaler, input grind settings range the user wish to study and run the script:
+```bash
+python3 src/grinder_model/grinder_model/model_sensitivity_analysis.py 
+```
+`model_sensitivity_analysis.py` script output from existing saved model
 ![image](https://github.com/user-attachments/assets/719e9046-9979-48d1-b76d-33503f387e3b)
 
 
