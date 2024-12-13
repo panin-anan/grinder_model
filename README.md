@@ -99,11 +99,12 @@ Start the script by running
 ```bash
 python3 src/grinder_model/grinder_model/volume_model_svr.py 
 ```
-The program will endlessly prompt for user to select test data in .csv file format to input.
-After the user becomes content with the amount of data file selected, just press cancel for the program to continue the next step.
+The program will endlessly prompt for user to select test data in .csv file format to input as shown below:
 ![image](https://github.com/user-attachments/assets/569c7767-62b0-4a97-9254-b7c3742823ec)
 
-The program will then use the selected data to train and test the model based on SVR method, outputting a model performance graph shown below:
+After the user becomes content with the amount of data file selected, just press cancel for the program to continue the next step.
+
+The program will then use the selected data to train and test the model based on SVR method, outputting a model performance graph looking like what is shown below:
 
 ![image](https://github.com/user-attachments/assets/c933ebe2-62ba-4705-b9e2-c163fad44d41)
 
@@ -118,7 +119,7 @@ Start the script by running
 python3 src/grinder_model/grinder_model/grind_settings_generator.py 
 ```
 
-The settings to achieve the input desired removal material volume should print out on the terminal:
+The settings to achieve the input desired removal material volume should print out on the terminal, for example:
 
 ![image](https://github.com/user-attachments/assets/3b87fcc8-0700-4f53-a612-d7916e4c39e9)
 
